@@ -1,2 +1,2 @@
-# DAPS_FAST26
+# DPAS_FAST26
 Artifact for dpas
