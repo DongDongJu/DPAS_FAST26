@@ -1,0 +1,90 @@
+#!/bin/bash
+#
+# Bring all CPUs online (CPU hotplug).
+#
+# Usage:
+#   sudo ./utils/cpu on
+#   sudo ./utils/cpu off <max_cpu_id_to_keep_online>
+#
+# Notes:
+# - Many systems disallow offlining CPU0 and/or CPU hotplug entirely.
+# - This script is intended for artifact reproducibility: keep all CPUs online.
+
+set -euo pipefail
+
+if [[ "${EUID}" -ne 0 ]]; then
+  echo "[ERROR] must be run as root (sudo)." >&2
+  exit 1
+fi
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $0 on | off <max_cpu_id_to_keep_online>" >&2
+  exit 2
+fi
+
+mode="$1"
+keep_max="${2:-}"
+
+sys_cpu="/sys/devices/system/cpu"
+
+if [[ ! -d "${sys_cpu}" ]]; then
+  echo "[ERROR] sysfs cpu directory not found: ${sys_cpu}" >&2
+  exit 1
+fi
+
+cpu_dirs=("${sys_cpu}"/cpu[0-9]*)
+if [[ "${cpu_dirs[0]}" == "${sys_cpu}/cpu[0-9]*" ]]; then
+  echo "[ERROR] no cpu directories found under ${sys_cpu}" >&2
+  exit 1
+fi
+
+fail=0
+
+case "${mode}" in
+  on)
+    for d in "${cpu_dirs[@]}"; do
+      online="${d}/online"
+      # cpu0 often has no "online" control; treat as always online.
+      if [[ -f "${online}" ]]; then
+        if ! echo 1 > "${online}" 2>/dev/null; then
+          echo "[WARN] failed to online ${online}" >&2
+          fail=1
+        fi
+      fi
+    done
+    ;;
+  off)
+    if [[ -z "${keep_max}" ]]; then
+      echo "Usage: $0 off <max_cpu_id_to_keep_online>" >&2
+      exit 2
+    fi
+    if ! [[ "${keep_max}" =~ ^[0-9]+$ ]]; then
+      echo "[ERROR] max_cpu_id_to_keep_online must be an integer" >&2
+      exit 2
+    fi
+    for d in "${cpu_dirs[@]}"; do
+      cpu_id="${d##*/cpu}"
+      online="${d}/online"
+      if [[ -f "${online}" ]]; then
+        if (( cpu_id > keep_max )); then
+          if ! echo 0 > "${online}" 2>/dev/null; then
+            echo "[WARN] failed to offline ${online}" >&2
+            fail=1
+          fi
+        else
+          # ensure kept CPUs are online
+          if ! echo 1 > "${online}" 2>/dev/null; then
+            echo "[WARN] failed to online ${online}" >&2
+            fail=1
+          fi
+        fi
+      fi
+    done
+    ;;
+  *)
+    echo "Usage: $0 on | off <max_cpu_id_to_keep_online>" >&2
+    exit 2
+    ;;
+esac
+
+exit "${fail}"

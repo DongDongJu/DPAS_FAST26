@@ -1,0 +1,33 @@
+# Generated experiment outputs
+scripts/micro_128krr/fio_data/
+scripts/micro_128krr/parsed_data/
+scripts/micro_128krr/result_data/
+scripts/micro_128krr/test_*/
+scripts/micro_4krr/fio_data/
+scripts/micro_4krr/parsed_data/
+scripts/micro_4krr/result_data/
+scripts/micro_4krr/test_*/
+
+# FIG21 outputs
+scripts/ycsb_*_results/
+scripts/results/
+scripts/out/
+scripts/time_log/
+scripts/result_collection/*.txt
+scripts/test/
+
+# Built binaries (keep sources, rebuild via scripts/build_fig21_deps.sh)
+scripts/io-generator
+scripts/io-generator[1-4]
+apps/**/ycsb
+apps/**/librocksdb*.a
+apps/**/librocksdb*.so
+
+# Runtime-generated config copies
+scripts/*.runtime
+scripts/*.properties.runtime
+
+# Python cache
+**/__pycache__/
+*.pyc
+
