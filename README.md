@@ -6,29 +6,29 @@ This repository contains the artifact for the DPAS FAST'26 paper. The goal is **
 
 **Important**: The scripts **format NVMe devices (mkfs.xfs -f)** and mount/unmount them. Existing data on the target devices will be destroyed.
 
-- **Run microbenchmarks only**:
+- **Run everything (microbenchmarks + FIG21)** (default `BGIO_IOPS=1000`):
 
 ```bash
 sudo ./run_all.sh
 ```
 
-- **Run microbenchmarks + FIG21 (BGIO+YCSB)** (example: BGIO_IOPS=5000):
+- **Run microbenchmarks only**:
 
 ```bash
-sudo ./run_all.sh --bgio-iops 5000
+sudo ./run_all.sh --no-fig21
 ```
 
 - **Quick smoke test (draft) + FIG21**:
 
 ```bash
-sudo ./run_all.sh --draft --bgio-iops 5000
+sudo ./run_all.sh --draft
 ```
 
 ## What does it run?
 
 - **Step 1 (`scripts/micro_128krr`)**: `./run.sh` → `python3 parse.py 1` → pretty summary output
 - **Step 2 (`scripts/micro_4krr`)**: `./run.sh` → `python3 parse.py 1` → pretty summary output
-- **Step 3 (FIG21: BGIO + YCSB, `scripts/`)**: runs only when `--bgio-iops` (or `BGIO_IOPS`) is provided
+- **Step 3 (FIG21: BGIO + YCSB, `scripts/`)**: runs by default with `BGIO_IOPS=1000` (disable with `--no-fig21`)
   - CPU hotplug: `scripts/cpuonoff.sh`
   - BG I/O + YCSB: `scripts/bgio_noaffinity.sh`
   - Result collection: `scripts/cp_res.sh`

@@ -15,19 +15,19 @@ APPS_DIR="${ROOT_DIR}/apps"
 usage() {
   cat <<'EOF'
 Usage:
-  sudo ./run_all.sh [--draft] [--clean] [--raw] [--bgio-iops N] [BGIO_IOPS]
+  sudo ./run_all.sh [--draft] [--clean] [--raw] [--no-fig21] [--bgio-iops N] [BGIO_IOPS]
 
 Options:
   --draft       Quick smoke-test mode (shorter runtimes and smaller sweeps).
   --clean       Remove ./parsed_data and ./result_data before each micro experiment.
   --raw         Print raw parsed output instead of pretty tables.
+  --no-fig21    Skip FIG21 (BGIO+YCSB).
   --bgio-iops N Enable FIG21 (BGIO+YCSB) and set BGIO target IOPS.
                (You can also pass BGIO_IOPS as a positional argument.)
 
 Notes:
-  - FIG21 (BGIO+YCSB) runs only when BGIO_IOPS is provided.
-    (If BGIO_IOPS is omitted, only microbenchmarks will run.)
-  - You can also set BGIO_IOPS via BGIO_IOPS or DPAS_BGIO_IOPS environment variables.
+  - If BGIO_IOPS is omitted, it defaults to 1000 (unless --no-fig21 is used).
+  - You can also set BGIO_IOPS via BGIO_IOPS environment variable.
 EOF
 }
 
@@ -241,7 +241,8 @@ main() {
   draft=0
   clean=0
   raw=0
-  bgio_iops="${BGIO_IOPS:-${DPAS_BGIO_IOPS:-}}"
+  run_fig21=1
+  bgio_iops="${BGIO_IOPS:-}"
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -255,6 +256,10 @@ main() {
         ;;
       --raw)
         raw=1
+        shift
+        ;;
+      --no-fig21)
+        run_fig21=0
         shift
         ;;
       --bgio-iops)
@@ -337,7 +342,10 @@ main() {
   run_experiment "${SCRIPTS_DIR}/micro_128krr" 1 "${clean}" "${raw}"
   run_experiment "${SCRIPTS_DIR}/micro_4krr" 1 "${clean}" "${raw}"
 
-  if [ -n "${bgio_iops}" ]; then
+  if [ "${run_fig21}" -eq 1 ]; then
+    if [ -z "${bgio_iops}" ]; then
+      bgio_iops=1000
+    fi
     case "${bgio_iops}" in
       *[!0-9]*)
         die "BGIO_IOPS must be an integer (got: ${bgio_iops})"
@@ -346,10 +354,7 @@ main() {
     run_fig21_bg_ycsb "${bgio_iops}" "${draft}"
   else
     echo
-    echo "[SKIP] FIG21 (BGIO + YCSB): BGIO_IOPS not provided."
-    echo "       Run with e.g.: sudo ./run_all.sh --bgio-iops 5000"
-    echo "       Note: if you exported BGIO_IOPS in your shell, sudo may drop it."
-    echo "             Use: sudo -E ./run_all.sh   (or: sudo BGIO_IOPS=5000 ./run_all.sh)"
+    echo "[SKIP] FIG21 (BGIO + YCSB): disabled via --no-fig21"
   fi
 }
 
