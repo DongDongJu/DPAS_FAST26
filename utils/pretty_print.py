@@ -73,7 +73,8 @@ def _bar(value: float, vmax: float, width: int = 18) -> str:
         return ""
     n = int(round((value / vmax) * width))
     n = max(0, min(width, n))
-    return "█" * n + " " * (width - n)
+    # Use ASCII-only bars for maximum terminal compatibility.
+    return "#" * n + " " * (width - n)
 
 
 def _try_float(s: str):

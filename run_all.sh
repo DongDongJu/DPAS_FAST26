@@ -2,6 +2,11 @@
 
 set -eu
 
+# Force a stable, English locale for all subprocess outputs (e.g., `date`).
+# This avoids Korean day/month names depending on the host locale.
+export LC_ALL=C
+export LANG=C
+
 ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 SCRIPTS_DIR="${ROOT_DIR}/scripts"
 UTILS_DIR="${ROOT_DIR}/utils"
@@ -336,7 +341,8 @@ main() {
     run_fig21_bg_ycsb "${bgio_iops}" "${draft}"
   else
     echo
-    echo "[SKIP] FIG21 (BGIO + YCSB): BGIO_IOPS not provided. (use --bgio-iops N or positional BGIO_IOPS)"
+    echo "[SKIP] FIG21 (BGIO + YCSB): BGIO_IOPS not provided."
+    echo "       Run with e.g.: sudo ./run_all.sh --bgio-iops 5000"
   fi
 }
 
