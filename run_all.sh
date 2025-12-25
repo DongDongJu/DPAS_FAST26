@@ -222,6 +222,7 @@ run_fig21_bg_ycsb() {
     sh ./um.sh || true
     bash ./bgio_noaffinity.sh 4 4 "${dev}" "${sleep_time}" "${bgio_iops}" "${epoch_ms}" "${bgruntime}" "${threshold}" CP HP EHP DPAS DPAS2 INT A B C D E F
     bash ./cp_res.sh "${name}" a b c d e f
+    sh ./um.sh || true
   }
 
   run_one_fig21 "nvme0n1" 10 "FIG21_P41"
