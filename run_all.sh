@@ -260,6 +260,10 @@ main() {
         bgio_iops="${2:-}"
         shift 2
         ;;
+      --bgio-iops=*)
+        bgio_iops="${1#--bgio-iops=}"
+        shift
+        ;;
       -h|--help)
         usage
         exit 0
@@ -343,6 +347,8 @@ main() {
     echo
     echo "[SKIP] FIG21 (BGIO + YCSB): BGIO_IOPS not provided."
     echo "       Run with e.g.: sudo ./run_all.sh --bgio-iops 5000"
+    echo "       Note: if you exported BGIO_IOPS in your shell, sudo may drop it."
+    echo "             Use: sudo -E ./run_all.sh   (or: sudo BGIO_IOPS=5000 ./run_all.sh)"
   fi
 }
 
