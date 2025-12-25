@@ -15,7 +15,13 @@ sudo ./run_all.sh
 - **Run microbenchmarks only**:
 
 ```bash
-sudo ./run_all.sh --no-fig21
+sudo ./run_all.sh --micro-only
+```
+
+- **Run FIG21 (macro) only** (example: `BGIO_IOPS=5000`):
+
+```bash
+sudo ./run_all.sh --macro-only --bgio-iops 5000
 ```
 
 - **Quick smoke test (draft) + FIG21**:

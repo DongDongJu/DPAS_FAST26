@@ -15,13 +15,15 @@ APPS_DIR="${ROOT_DIR}/apps"
 usage() {
   cat <<'EOF'
 Usage:
-  sudo ./run_all.sh [--draft] [--clean] [--raw] [--no-fig21] [--bgio-iops N] [BGIO_IOPS]
+  sudo ./run_all.sh [--draft] [--clean] [--raw] [--micro-only|--macro-only] [--no-fig21] [--bgio-iops N] [BGIO_IOPS]
 
 Options:
   --draft       Quick smoke-test mode (shorter runtimes and smaller sweeps).
   --clean       Remove ./parsed_data and ./result_data before each micro experiment.
   --raw         Print raw parsed output instead of pretty tables.
-  --no-fig21    Skip FIG21 (BGIO+YCSB).
+  --micro-only  Run only microbenchmarks (Step 1 & 2).
+  --macro-only  Run only FIG21 (BGIO+YCSB).
+  --no-fig21    Alias of --micro-only.
   --bgio-iops N Enable FIG21 (BGIO+YCSB) and set BGIO target IOPS.
                (You can also pass BGIO_IOPS as a positional argument.)
 
@@ -241,7 +243,8 @@ main() {
   draft=0
   clean=0
   raw=0
-  run_fig21=1
+  run_micro=1
+  run_macro=1
   bgio_iops="${BGIO_IOPS:-}"
 
   while [ $# -gt 0 ]; do
@@ -258,8 +261,19 @@ main() {
         raw=1
         shift
         ;;
+      --micro-only)
+        run_micro=1
+        run_macro=0
+        shift
+        ;;
+      --macro-only)
+        run_micro=0
+        run_macro=1
+        shift
+        ;;
       --no-fig21)
-        run_fig21=0
+        run_micro=1
+        run_macro=0
         shift
         ;;
       --bgio-iops)
@@ -295,17 +309,20 @@ main() {
   require_root
 
   require_cmd bash
-  require_cmd fio
-  require_cmd python3
-  require_cmd mkfs.xfs
+  require_cmd chown
+  require_cmd findmnt
   require_cmd mount
-  require_cmd umount
+  require_cmd mkfs.xfs
   require_cmd modprobe
   require_cmd pgrep
   require_cmd sed
   require_cmd tee
-  require_cmd findmnt
-  require_cmd chown
+  require_cmd umount
+
+  if [ "${run_micro}" -eq 1 ]; then
+    require_cmd fio
+    require_cmd python3
+  fi
 
   ensure_all_cpus_online
 
@@ -339,10 +356,15 @@ main() {
     clean=1
   fi
 
-  run_experiment "${SCRIPTS_DIR}/micro_128krr" 1 "${clean}" "${raw}"
-  run_experiment "${SCRIPTS_DIR}/micro_4krr" 1 "${clean}" "${raw}"
+  if [ "${run_micro}" -eq 1 ]; then
+    run_experiment "${SCRIPTS_DIR}/micro_128krr" 1 "${clean}" "${raw}"
+    run_experiment "${SCRIPTS_DIR}/micro_4krr" 1 "${clean}" "${raw}"
+  else
+    echo
+    echo "[SKIP] microbenchmarks (Step 1 & 2): disabled via --macro-only"
+  fi
 
-  if [ "${run_fig21}" -eq 1 ]; then
+  if [ "${run_macro}" -eq 1 ]; then
     if [ -z "${bgio_iops}" ]; then
       bgio_iops=1000
     fi
@@ -354,7 +376,10 @@ main() {
     run_fig21_bg_ycsb "${bgio_iops}" "${draft}"
   else
     echo
-    echo "[SKIP] FIG21 (BGIO + YCSB): disabled via --no-fig21"
+    if [ -n "${bgio_iops}" ]; then
+      echo "[WARN] BGIO_IOPS was provided (${bgio_iops}) but FIG21 is disabled; ignoring."
+    fi
+    echo "[SKIP] FIG21 (BGIO + YCSB): disabled via --micro-only/--no-fig21"
   fi
 }
 
