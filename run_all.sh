@@ -15,7 +15,7 @@ APPS_DIR="${ROOT_DIR}/apps"
 usage() {
   cat <<'EOF'
 Usage:
-  sudo ./run_all.sh [--draft] [--clean] [--raw] [--micro-only|--macro-only] [--no-fig21] [--bgio-iops N] [BGIO_IOPS]
+  sudo ./run_all.sh [--draft] [--clean] [--raw] [--micro-only|--macro-only] [--no-fig21]
 
 Options:
   --draft       Quick smoke-test mode (shorter runtimes and smaller sweeps).
@@ -24,12 +24,9 @@ Options:
   --micro-only  Run only microbenchmarks (Step 1 & 2).
   --macro-only  Run only FIG21 (BGIO+YCSB).
   --no-fig21    Alias of --micro-only.
-  --bgio-iops N Enable FIG21 (BGIO+YCSB) and set BGIO target IOPS.
-               (You can also pass BGIO_IOPS as a positional argument.)
 
 Notes:
-  - If BGIO_IOPS is omitted, it defaults to 1000 (unless --no-fig21 is used).
-  - You can also set BGIO_IOPS via BGIO_IOPS environment variable.
+  - FIG21 BGIO IOPS is fixed to 1000 in this artifact runner.
 EOF
 }
 
@@ -245,7 +242,6 @@ main() {
   raw=0
   run_micro=1
   run_macro=1
-  bgio_iops="${BGIO_IOPS:-}"
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -276,14 +272,6 @@ main() {
         run_macro=0
         shift
         ;;
-      --bgio-iops)
-        bgio_iops="${2:-}"
-        shift 2
-        ;;
-      --bgio-iops=*)
-        bgio_iops="${1#--bgio-iops=}"
-        shift
-        ;;
       -h|--help)
         usage
         exit 0
@@ -296,12 +284,7 @@ main() {
         die "unknown option: $1"
         ;;
       *)
-        if [ -z "${bgio_iops}" ]; then
-          bgio_iops="$1"
-          shift
-        else
-          die "unexpected extra argument: $1"
-        fi
+        die "unexpected extra argument: $1"
         ;;
     esac
   done
@@ -357,28 +340,17 @@ main() {
   fi
 
   if [ "${run_micro}" -eq 1 ]; then
-    run_experiment "${SCRIPTS_DIR}/micro_128krr" 1 "${clean}" "${raw}"
     run_experiment "${SCRIPTS_DIR}/micro_4krr" 1 "${clean}" "${raw}"
+    run_experiment "${SCRIPTS_DIR}/micro_128krr" 1 "${clean}" "${raw}"
   else
     echo
     echo "[SKIP] microbenchmarks (Step 1 & 2): disabled via --macro-only"
   fi
 
   if [ "${run_macro}" -eq 1 ]; then
-    if [ -z "${bgio_iops}" ]; then
-      bgio_iops=1000
-    fi
-    case "${bgio_iops}" in
-      *[!0-9]*)
-        die "BGIO_IOPS must be an integer (got: ${bgio_iops})"
-        ;;
-    esac
-    run_fig21_bg_ycsb "${bgio_iops}" "${draft}"
+    run_fig21_bg_ycsb 1000 "${draft}"
   else
     echo
-    if [ -n "${bgio_iops}" ]; then
-      echo "[WARN] BGIO_IOPS was provided (${bgio_iops}) but FIG21 is disabled; ignoring."
-    fi
     echo "[SKIP] FIG21 (BGIO + YCSB): disabled via --micro-only/--no-fig21"
   fi
 }
