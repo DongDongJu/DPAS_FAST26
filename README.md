@@ -6,7 +6,7 @@ This repository contains the artifact for the DPAS FAST'26 paper. The goal is **
 
 **Important**: The scripts **format NVMe devices (mkfs.xfs -f)** and mount/unmount them. Existing data on the target devices will be destroyed.
 
-- **Run everything (microbenchmarks + FIG21)** (FIG21 BGIO IOPS is fixed to 1000):
+- **Run everything (microbenchmarks + Dynamic mode switching of DPAS (Fig. 20))** (BGIO IOPS is fixed to 1000):
 
 ```bash
 sudo ./run_all.sh
@@ -18,13 +18,13 @@ sudo ./run_all.sh
 sudo ./run_all.sh --micro-only
 ```
 
-- **Run FIG21 (macro) only** (BGIO IOPS is fixed to 1000):
+- **Run macro only: Dynamic mode switching of DPAS (Fig. 20)** (BGIO IOPS is fixed to 1000):
 
 ```bash
 sudo ./run_all.sh --macro-only
 ```
 
-- **Quick smoke test (draft) + FIG21**:
+- **Quick smoke test (draft) + macro**:
 
 ```bash
 sudo ./run_all.sh --draft
@@ -34,7 +34,7 @@ sudo ./run_all.sh --draft
 
 - **Step 1 (`scripts/micro_4krr`)**: `./run.sh` → `python3 parse.py 1` → pretty summary output
 - **Step 2 (`scripts/micro_128krr`)**: `./run.sh` → `python3 parse.py 1` → pretty summary output
-- **Step 3 (FIG21: BGIO + YCSB, `scripts/`)**: runs by default with fixed BGIO IOPS=1000 (disable with `--no-fig21`)
+- **Step 3 (`Dynamic mode switching of DPAS (Fig. 20)`, BGIO + YCSB, `scripts/`)**: runs by default with fixed BGIO IOPS=1000 (disable with `--no-fig21`)
   - CPU hotplug: `scripts/cpuonoff.sh`
   - BG I/O + YCSB: `scripts/bgio_noaffinity.sh`
   - Result collection: `scripts/cp_res.sh`
@@ -45,7 +45,7 @@ sudo ./run_all.sh --draft
 - **CPU online (reproducibility)**: `utils/cpu on` is called at the beginning to online as many CPUs as possible (some environments may restrict hotplug).
 - **Device naming**:
   - Microbenchmarks default to `nvme0n1,nvme1n1,nvme2n1` (can be overridden by env vars).
-  - FIG21 scripts are written assuming `nvme0n1/nvme1n1/nvme2n1`.
+  - Macro scripts are written assuming `nvme0n1/nvme1n1/nvme2n1`.
 
 ## Dependencies (summary)
 
@@ -88,9 +88,9 @@ fio --version
 fio --enghelp | grep -n pvsync2
 ```
 
-## Building FIG21 dependencies (BGIO+YCSB)
+## Building dependencies for Dynamic mode switching of DPAS (Fig. 20) (BGIO+YCSB)
 
-FIG21 requires additional binaries: `io-generator`, RocksDB, and YCSB.
+This macro experiment requires additional binaries: `io-generator`, RocksDB, and YCSB.
 
 ### Ubuntu/Debian packages (recommended)
 
@@ -137,7 +137,7 @@ make -C apps/rocksdb_modi static_lib
 make -C apps/YCSB-cpp-modi
 ```
 
-### Ubuntu/Debian example: packages for FIG21 build
+### Ubuntu/Debian example: packages for macro build
 
 ```bash
 sudo apt update
@@ -150,7 +150,7 @@ sudo apt install -y build-essential zlib1g-dev libsnappy-dev liblz4-dev libzstd-
 - `--clean`: delete `./parsed_data` and `./result_data` before each micro experiment
 - `--raw`: print raw parsed output instead of pretty tables
 - `--micro-only`: run only microbenchmarks (Step 1 & 2)
-- `--macro-only`: run only FIG21 (macro)
+- `--macro-only`: run only `Dynamic mode switching of DPAS (Fig. 20)` (macro)
 - `--no-fig21`: alias of `--micro-only`
 
 ## Outputs
@@ -158,7 +158,7 @@ sudo apt install -y build-essential zlib1g-dev libsnappy-dev liblz4-dev libzstd-
 - Microbenchmarks:
   - `scripts/micro_128krr/parsed_data/*`, `scripts/micro_128krr/result_data/*`
   - `scripts/micro_4krr/parsed_data/*`, `scripts/micro_4krr/result_data/*`
-- FIG21:
+- Macro (Dynamic mode switching of DPAS (Fig. 20)):
   - `scripts/ycsb_*_results/`
   - `scripts/result_collection/*`
 
@@ -173,8 +173,8 @@ sudo apt install -y build-essential zlib1g-dev libsnappy-dev liblz4-dev libzstd-
 - **`fio: fio_setaffinity failed`**
   - Cause: affinity mismatch due to CPU count / cpuset/cgroup restrictions.
   - The scripts use `/proc/self/status` `Cpus_allowed_list` to reduce this issue.
-- **FIG21 prompts for sudo / fails**
-  - `run_all.sh` is designed to be executed as root; FIG21 scripts treat `sudo` as a no-op when running as root.
+- **Macro prompts for sudo / fails**
+  - `run_all.sh` is designed to be executed as root; macro scripts treat `sudo` as a no-op when running as root.
 - **`./run_all.sh: syntax error near unexpected token '('`**
   - If you are using an older revision of this artifact: this was typically caused by running bash-specific code via `sh`.
   - Current `run_all.sh` is POSIX `sh` compatible, so this error should not occur.

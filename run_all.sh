@@ -22,11 +22,11 @@ Options:
   --clean       Remove ./parsed_data and ./result_data before each micro experiment.
   --raw         Print raw parsed output instead of pretty tables.
   --micro-only  Run only microbenchmarks (Step 1 & 2).
-  --macro-only  Run only FIG21 (BGIO+YCSB).
+  --macro-only  Run only Dynamic mode switching of DPAS (Fig. 20) (BGIO+YCSB).
   --no-fig21    Alias of --micro-only.
 
 Notes:
-  - FIG21 BGIO IOPS is fixed to 1000 in this artifact runner.
+  - Macro BGIO IOPS is fixed to 1000 in this artifact runner.
 EOF
 }
 
@@ -77,7 +77,7 @@ ensure_fig21_deps_built() {
   [ -x "${APPS_DIR}/YCSB-cpp-modi/ycsb" ] || need_build=1
 
   if [ "${need_build}" -eq 1 ]; then
-    echo "[INFO] FIG21 dependencies missing; building now..."
+    echo "[INFO] macro dependencies missing; building now..."
     bash "${build_script}"
   fi
 }
@@ -180,7 +180,7 @@ run_fig21_bg_ycsb() {
 
   echo
   echo "============================================================"
-  echo "[RUN] FIG21 (BGIO + YCSB)  (BGIO_IOPS=${bgio_iops})"
+  echo "[RUN] Dynamic mode switching of DPAS (Fig. 20)  (BGIO + YCSB, IOPS=${bgio_iops})"
   echo "============================================================"
 
   oldpwd="$(pwd)"
@@ -217,16 +217,16 @@ run_fig21_bg_ycsb() {
     name="$3"
 
     echo
-    echo "[FIG21] ${name}  device=${dev}  threshold=${threshold}"
+    echo "[MACRO] ${name}  device=${dev}  threshold=${threshold}"
     sh ./um.sh || true
     bash ./bgio_noaffinity.sh 4 4 "${dev}" "${sleep_time}" "${bgio_iops}" "${epoch_ms}" "${bgruntime}" "${threshold}" CP HP EHP DPAS DPAS2 INT A B C D E F
     bash ./cp_res.sh "${name}" a b c d e f
     sh ./um.sh || true
   }
 
-  run_one_fig21 "nvme0n1" 10 "FIG21_P41"
-  run_one_fig21 "nvme2n1" 10 "FIG21_ZSSD"
-  run_one_fig21 "nvme1n1" 30 "FIG21_Optane"
+  run_one_fig21 "nvme0n1" 10 "FIG20_P41"
+  run_one_fig21 "nvme2n1" 10 "FIG20_ZSSD"
+  run_one_fig21 "nvme1n1" 30 "FIG20_Optane"
 
   bash ./cpuonoff.sh 1 19
 
@@ -351,7 +351,7 @@ main() {
     run_fig21_bg_ycsb 1000 "${draft}"
   else
     echo
-    echo "[SKIP] FIG21 (BGIO + YCSB): disabled via --micro-only/--no-fig21"
+    echo "[SKIP] macro (Dynamic mode switching of DPAS (Fig. 20)): disabled via --micro-only/--no-fig21"
   fi
 }
 
