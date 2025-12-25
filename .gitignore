@@ -31,3 +31,29 @@ scripts/*.properties.runtime
 **/__pycache__/
 *.pyc
 
+# Linux kernel build artifacts (this repo vendors a kernel tree under ./kernel)
+kernel/.config
+kernel/.missing-syscalls.d
+kernel/**/include/generated/
+kernel/**/arch/**/include/generated/
+kernel/**/generated/
+kernel/**/.cache.mk
+kernel/**/.*.cmd
+kernel/**/*.cmd
+kernel/**/*.o
+kernel/**/*.a
+kernel/**/*.so
+kernel/**/*.ko
+kernel/**/*.mod
+kernel/**/*.mod.c
+kernel/**/modules.order
+kernel/**/Module.symvers
+kernel/**/built-in.a
+kernel/**/bounds.s
+kernel/**/asm-offsets.s
+kernel/include/config/
+kernel/scripts/kconfig/lexer.lex.c
+kernel/scripts/kconfig/parser.tab.c
+kernel/scripts/kconfig/parser.tab.h
+kernel/scripts/mod/devicetable-offsets.s
+

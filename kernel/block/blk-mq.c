@@ -27,6 +27,7 @@
 #include <linux/delay.h>
 #include <linux/crash_dump.h>
 #include <linux/prefetch.h>
+#include <linux/mutex.h>
 #include <linux/blk-crypto.h>
 #include <linux/part_stat.h>
 
@@ -57,8 +58,6 @@ static DEFINE_PER_CPU(struct llist_head, blk_cpu_done);
 static void blk_mq_poll_stats_start(struct request_queue *q);
 static void blk_mq_poll_stats_fn(struct blk_stat_callback *cb);
 
-#define CPU_COUNT 20
-
 #define _INT 0
 #define _CP 1
 #define _PAS 2
@@ -69,61 +68,152 @@ int io_log_started = 0;
 
 static char log_first_line[] = "cpu,bucket,ret_num,sleep_requested,sleep_actual,io_time,timestamp\n";
 static char log_first_line_verbose[] = "code,cpu,lba,sectors,bucket,update_req,sr_pnlt,sr_last,dur_cnt,dur_cnt_checked,adj,up,dn,dur,sleep_actual,poll_time,poll_ret,io_time,rq_cpu_num,rq_dur,rq_dur_cnt,dur_cnt,dur_cnt_checked,sr_pnlt,sr_last,update_req,timestamp\n";
-static struct file* log_files[CPU_COUNT];
-static loff_t log_positions[CPU_COUNT];
+
+/*
+ * DPAS I/O logging helpers
+ *
+ * The original artifact version used a fixed CPU_COUNT=20, which breaks on
+ * machines with a different CPU topology. Allocate per-CPU state sized to
+ * nr_cpu_ids and iterate with for_each_online_cpu().
+ */
+static DEFINE_MUTEX(io_log_mutex);
+static struct file **log_files;
+static loff_t *log_positions;
+static unsigned int log_capacity;
+
+static int io_log_alloc_arrays(void)
+{
+	unsigned int cap = nr_cpu_ids;
+
+	if (log_files && log_positions && log_capacity == cap)
+		return 0;
+
+	kfree(log_files);
+	kfree(log_positions);
+	log_files = NULL;
+	log_positions = NULL;
+	log_capacity = 0;
+
+	log_files = kcalloc(cap, sizeof(*log_files), GFP_KERNEL);
+	log_positions = kcalloc(cap, sizeof(*log_positions), GFP_KERNEL);
+	if (!log_files || !log_positions) {
+		kfree(log_files);
+		kfree(log_positions);
+		log_files = NULL;
+		log_positions = NULL;
+		return -ENOMEM;
+	}
+
+	log_capacity = cap;
+	return 0;
+}
+
+static void io_log_close_all(void)
+{
+	unsigned int cpu;
+
+	if (!log_files || !log_positions || !log_capacity)
+		return;
+
+	for (cpu = 0; cpu < log_capacity; cpu++) {
+		if (log_files[cpu]) {
+			filp_close(log_files[cpu], NULL);
+			log_files[cpu] = NULL;
+		}
+		log_positions[cpu] = 0;
+	}
+}
 
 void start_io_log(void) {
-	int i;
-	char filename[] = "/media/ramdisk/pas_log_";
-	printk("Online CPUS: %d\n", num_online_cpus());
-	for(i=0;i<num_online_cpus();i++) {
-		char buffer[500] = {0, };
-		char core_buffer[10] = {0, };
-		log_positions[i] = 0;
+	int cpu;
+	const char *filename = "/media/ramdisk/pas_log_";
 
-		sprintf(core_buffer, "%d", i);
-		strcat(buffer, filename);
-		strcat(buffer, core_buffer);
-		strcat(buffer, ".csv");
-		log_files[i] = filp_open(buffer,  O_CREAT | O_TRUNC | O_WRONLY, 0666);
-		kernel_write(log_files[i], log_first_line, 
-			strlen(log_first_line), &log_positions[i]);
+	mutex_lock(&io_log_mutex);
+
+	if (io_log_alloc_arrays()) {
+		printk("I/O Logging: failed to allocate per-CPU arrays (nr_cpu_ids=%u)\n", nr_cpu_ids);
+		mutex_unlock(&io_log_mutex);
+		return;
 	}
+
+	io_log_started = 0;
+	io_log_close_all();
+
+	printk("Online CPUS: %d\n", num_online_cpus());
+	for_each_online_cpu(cpu) {
+		char buffer[500];
+
+		if ((unsigned int)cpu >= log_capacity)
+			continue;
+
+		log_positions[cpu] = 0;
+		snprintf(buffer, sizeof(buffer), "%s%d.csv", filename, cpu);
+
+		log_files[cpu] = filp_open(buffer, O_CREAT | O_TRUNC | O_WRONLY, 0666);
+		if (IS_ERR(log_files[cpu])) {
+			printk("I/O Logging: failed to open %s\n", buffer);
+			log_files[cpu] = NULL;
+			continue;
+		}
+
+		kernel_write(log_files[cpu], log_first_line,
+			     strlen(log_first_line), &log_positions[cpu]);
+	}
+
 	io_log_started = 1;
-	printk("I/O Logging Started");
+	printk("I/O Logging Started\n");
+	mutex_unlock(&io_log_mutex);
 }
 EXPORT_SYMBOL(start_io_log);
 
 void start_io_log_verbose(void) {
-	int i;
-	char filename[] = "/media/ramdisk/pas_log_";
-	printk("Online CPUS: %d\n", num_online_cpus());
-	for(i=0;i<num_online_cpus();i++) {
-		char buffer[500] = {0, };
-		char core_buffer[10] = {0, };
-		log_positions[i] = 0;
+	int cpu;
+	const char *filename = "/media/ramdisk/pas_log_";
 
-		sprintf(core_buffer, "%d", i);
-		strcat(buffer, filename);
-		strcat(buffer, core_buffer);
-		strcat(buffer, ".csv");
-		log_files[i] = filp_open(buffer,  O_CREAT | O_TRUNC | O_WRONLY, 0666);
-		kernel_write(log_files[i], log_first_line_verbose, 
-			strlen(log_first_line_verbose), &log_positions[i]);
+	mutex_lock(&io_log_mutex);
+
+	if (io_log_alloc_arrays()) {
+		printk("I/O Logging: failed to allocate per-CPU arrays (nr_cpu_ids=%u)\n", nr_cpu_ids);
+		mutex_unlock(&io_log_mutex);
+		return;
 	}
+
+	io_log_started = 0;
+	io_log_close_all();
+
+	printk("Online CPUS: %d\n", num_online_cpus());
+	for_each_online_cpu(cpu) {
+		char buffer[500];
+
+		if ((unsigned int)cpu >= log_capacity)
+			continue;
+
+		log_positions[cpu] = 0;
+		snprintf(buffer, sizeof(buffer), "%s%d.csv", filename, cpu);
+
+		log_files[cpu] = filp_open(buffer, O_CREAT | O_TRUNC | O_WRONLY, 0666);
+		if (IS_ERR(log_files[cpu])) {
+			printk("I/O Logging: failed to open %s\n", buffer);
+			log_files[cpu] = NULL;
+			continue;
+		}
+
+		kernel_write(log_files[cpu], log_first_line_verbose,
+			     strlen(log_first_line_verbose), &log_positions[cpu]);
+	}
+
 	io_log_started = 2;
-	printk("I/O Logging Started");
+	printk("I/O Logging Started\n");
+	mutex_unlock(&io_log_mutex);
 }
 EXPORT_SYMBOL(start_io_log_verbose);
 
 void end_io_log(void) {
-	int i;
+	mutex_lock(&io_log_mutex);
 	io_log_started = 0;
-	
-	for(i=0;i<num_online_cpus();i++) {
-		log_positions[i] = 0;
-		filp_close(log_files[i], NULL);
-	}
+	io_log_close_all();
+	mutex_unlock(&io_log_mutex);
+
 	printk("I/O Logging Disabled\n");
 }
 EXPORT_SYMBOL(end_io_log);
@@ -165,8 +255,16 @@ void write_io_log(int cpu_num, int bucket, int ret_num,
 	strcat(write_buffer, sleep_actual_buffer);
 	strcat(write_buffer, io_time_buffer);
 	strcat(write_buffer, timestamp_buffer);
+
+	if (!io_log_started || !log_files || !log_positions)
+		return;
+	if ((unsigned int)cpu_num >= log_capacity)
+		return;
+	if (!log_files[cpu_num])
+		return;
+
 	kernel_write(log_files[cpu_num], write_buffer, strlen(write_buffer),
-		&log_positions[cpu_num]);	
+		     &log_positions[cpu_num]);
 }
 
 void write_io_log_verbose(char* code, int cpu_num, sector_t lba, unsigned int sectors, int bucket, 
@@ -263,8 +361,15 @@ void write_io_log_verbose(char* code, int cpu_num, sector_t lba, unsigned int se
 	strcat(write_buffer, update_req_s_buffer);
 	strcat(write_buffer, timestamp_buffer);
 
-	kernel_write(log_files[cpu_num], write_buffer, strlen(write_buffer), 
-		&log_positions[cpu_num]);
+	if (!io_log_started || !log_files || !log_positions)
+		return;
+	if ((unsigned int)cpu_num >= log_capacity)
+		return;
+	if (!log_files[cpu_num])
+		return;
+
+	kernel_write(log_files[cpu_num], write_buffer, strlen(write_buffer),
+		     &log_positions[cpu_num]);
 }
 
 static void init_pas_stat(struct blk_rq_pas_stat *stat,  
@@ -288,7 +393,7 @@ static void init_pas_stat(struct blk_rq_pas_stat *stat,
 		stat->update_req);*/
 }
 
-static void restart_pas_stat(struct blk_rq_pas_stat *stat)
+static void __maybe_unused restart_pas_stat(struct blk_rq_pas_stat *stat)
 {
 	stat->sr_pnlt = 0;
 	stat->sr_last = 1;
@@ -4961,7 +5066,7 @@ static unsigned long blk_mq_poll_pas_nsecs(struct request_queue *q,
 {
 	unsigned long ret = 0;
 	struct blk_rq_pas_stat *stat;
-	int bucket, bucket_idx;
+	int bucket;
 	int cur_case;
 	//int cpu_num;
 	struct blk_switch *sc;
