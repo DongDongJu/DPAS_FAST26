@@ -11,7 +11,9 @@
 
 DEBUG_BUILD ?= 0
 EXTRA_CXXFLAGS ?= -I../rocksdb_modi/include
-EXTRA_LDFLAGS ?= -L../rocksdb_modi -ldl -lz -lsnappy -lzstd -llz4
+# When linking against the static RocksDB library, we must also link its
+# transitive dependencies (compression libs, io_uring, etc.).
+EXTRA_LDFLAGS ?= -L../rocksdb_modi -ldl -lz -lsnappy -lzstd -lbz2 -llz4 -luring
 
 BIND_LEVELDB ?= 0
 BIND_ROCKSDB ?= 1

@@ -35,7 +35,14 @@ echo "[BUILD] rocksdb_modi (apps/rocksdb_modi) static_lib"
 make -C "${APPS_DIR}/rocksdb_modi" static_lib
 
 echo "[BUILD] YCSB-cpp-modi (apps/YCSB-cpp-modi)"
-make -C "${APPS_DIR}/YCSB-cpp-modi"
+make -C "${APPS_DIR}/YCSB-cpp-modi" || {
+  echo "[ERROR] failed to build YCSB-cpp-modi." >&2
+  echo "        If you see undefined references like io_uring_* or BZ2_*," >&2
+  echo "        install runtime/dev libs and retry:" >&2
+  echo "          - Ubuntu/Debian: sudo apt install -y liburing-dev libbz2-dev zlib1g-dev libsnappy-dev liblz4-dev libzstd-dev" >&2
+  echo "        (YCSB links against RocksDB and must link these transitive libs.)" >&2
+  exit 1
+}
 
 echo "[OK] FIG21 dependencies built."
 

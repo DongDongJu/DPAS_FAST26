@@ -92,6 +92,14 @@ fio --enghelp | grep -n pvsync2
 
 FIG21 requires additional binaries: `io-generator`, RocksDB, and YCSB.
 
+### Ubuntu/Debian packages (recommended)
+
+```bash
+sudo apt update
+sudo apt install -y build-essential g++ make pkg-config \
+  liburing-dev libbz2-dev zlib1g-dev libsnappy-dev liblz4-dev libzstd-dev
+```
+
 ### One-shot build (recommended)
 
 ```bash
