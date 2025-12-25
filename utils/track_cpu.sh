@@ -33,6 +33,10 @@ fi
 
 [[ -f "${LOG_FILE}" ]] && rm -f "${LOG_FILE}"
 
+# Ensure the tmpfs-backed log file exists even if the process exits quickly,
+# so downstream mv does not fail.
+: > "${TIME_LOG_FOLDER}/${LOG_FILE}"
+
 while true; do
   if [[ -n "$(pidof -s "${PNAME}" 2>/dev/null || true)" ]]; then
     pids="$(pidof -s "${PNAME}")"

@@ -68,6 +68,11 @@ def parse_ycsb(filepath):
     output_stream = os.popen("grep " + "ops/sec " + filepath)
     output = output_stream.read().strip()
     data = output.split()
+    if len(data) < 3:
+        # YCSB may have aborted or produced an unexpected output format.
+        # Keep parsing best-effort instead of crashing.
+        ycsb_result['ops/sec'] = "NA"
+        return ycsb_result
     ycsb_result['ops/sec'] = data[2]
 
 

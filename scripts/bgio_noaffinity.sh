@@ -56,11 +56,13 @@ fi
 # Other variables
 OUTPUT="ycsb_output.txt"
 OUTPUT_FOLDER="results"
-MOUNT_FOLDER="out"
+# Use an absolute mount point under this repo to avoid accidental dependency on
+# a hardcoded user path inside rocksdb.properties (e.g., /home/shawn/...).
+MOUNT_FOLDER="${SCRIPT_DIR}/out"
 FILENAME="ycsb.txt"
 WORKLORDS_FOLDER="${YCSB_CPP_MODI_DIR}/workloads"
-DIR=$(readlink -f $MOUNT_FOLDER)
-TMP=$(echo $DIR | sed 's#/#\\/#g')
+DIR="${MOUNT_FOLDER}"
+TMP="$(echo "${DIR}" | sed 's#/#\\/#g')"
 
 # Initialize all workload and mode variables to false
 YCSB_A=false
@@ -129,7 +131,13 @@ if $M_INT; then echo "INT"; fi
 setup_workloads(){
     # Do NOT edit repo-tracked properties in-place. Create a per-run copy.
     cp "${ROCKSDB_PROPERTIES_SRC}" "${ROCKSDB_PROPERTIES_FILE}"
-    sed -i "s|^dbname=.*|dbname=${DIR}|g" "${ROCKSDB_PROPERTIES_FILE}"
+    # Ensure the db directory exists (RocksDB may not mkdir -p parents).
+    mkdir -p "${DIR}"
+    # Overwrite db path in a robust way (support both keys).
+    sed -i \
+      -e "s|^rocksdb\\.dbname=.*|rocksdb.dbname=${DIR}|g" \
+      -e "s|^dbname=.*|dbname=${DIR}|g" \
+      "${ROCKSDB_PROPERTIES_FILE}"
 }
 
 reset_device(){
@@ -198,14 +206,15 @@ ycsb_run(){
         mkdir $LOGS_FOLDER
     fi
 
-    # Unmount the tested device and remove block folder
-    if $(findmnt --source /dev/$DEVICE >/dev/null);
-    then echo "unmount /dev/$DEVICE" && sudo umount /dev/$DEVICE 
-    fi 
-    [ -d $MOUNT_FOLDER ] && sudo rm -rf $MOUNT_FOLDER
+    # Unmount the tested device and remove mount folder
+    if findmnt --source "/dev/${DEVICE}" >/dev/null 2>&1; then
+      echo "unmount /dev/${DEVICE}"
+      sudo umount "/dev/${DEVICE}" || true
+    fi
+    [ -d "${MOUNT_FOLDER}" ] && sudo rm -rf "${MOUNT_FOLDER}"
 
     # Create mount point
-    mkdir -p $MOUNT_FOLDER
+    mkdir -p "${MOUNT_FOLDER}"
     echo "initialization"
     sudo mkfs -t xfs -f /dev/$DEVICE
     sleep 3
@@ -213,7 +222,7 @@ ycsb_run(){
     sleep 3
     sudo modprobe nvme poll_queues=$NUM_OF_CORES; echo "poll_queue: $NUM_OF_CORES"; # ../../../dump_qmap $DEVICE
     sleep 1
-    sudo mount /dev/$DEVICE $MOUNT_FOLDER
+    sudo mount "/dev/${DEVICE}" "${MOUNT_FOLDER}"
     sleep 1
 
 
