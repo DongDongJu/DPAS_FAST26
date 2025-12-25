@@ -6,7 +6,7 @@ This repository contains the artifact for the DPAS FAST'26 paper. The goal is **
 
 **Important**: The scripts **format NVMe devices (mkfs.xfs -f)** and mount/unmount them. Existing data on the target devices will be destroyed.
 
-- **Run everything (microbenchmarks + Dynamic mode switching of DPAS (Fig. 20))** (BGIO IOPS is fixed to 1000):
+- **Run everything (microbenchmarks + Dynamic mode switching of DPAS (Fig. 20))**:
 
 ```bash
 sudo ./run_all.sh
@@ -18,7 +18,7 @@ sudo ./run_all.sh
 sudo ./run_all.sh --micro-only
 ```
 
-- **Run macro only: Dynamic mode switching of DPAS (Fig. 20)** (BGIO IOPS is fixed to 1000):
+- **Run macro only: Dynamic mode switching of DPAS (Fig. 20)**:
 
 ```bash
 sudo ./run_all.sh --macro-only
@@ -34,7 +34,7 @@ sudo ./run_all.sh --draft
 
 - **Step 1 (`scripts/micro_4krr`)**: `./run.sh` → `python3 parse.py 1` → pretty summary output
 - **Step 2 (`scripts/micro_128krr`)**: `./run.sh` → `python3 parse.py 1` → pretty summary output
-- **Step 3 (`Dynamic mode switching of DPAS (Fig. 20)`, BGIO + YCSB, `scripts/`)**: runs by default with fixed BGIO IOPS=1000 (disable with `--no-fig21`)
+- **Step 3 (`Dynamic mode switching of DPAS (Fig. 20)`, BGIO + YCSB, `scripts/`)**: runs by default (disable with `--no-fig21`)
   - CPU hotplug: `scripts/cpuonoff.sh`
   - BG I/O + YCSB: `scripts/bgio_noaffinity.sh`
   - Result collection: `scripts/cp_res.sh`
