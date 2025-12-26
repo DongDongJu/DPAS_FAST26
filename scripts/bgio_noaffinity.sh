@@ -31,7 +31,7 @@ is_positive_integer() {
 # Check if there are at least three input parameters
 if [ $# -lt 8 ]; then
   echo "Usage: $0 <NUM_OF_THREADS> <NUM_OF_CORES> <DEVICE> <SLEEP_TIME> <IOPS> <EPOCH ms> [MODE1 MODE2 ...]"
-  echo "Supported modes: A B C D E F CP HP EHP DPAS DPAS2 INT"
+  echo "Supported modes: A B C D E F CP LHP EHP DPAS DPAS2 INT"
   echo "Example: $0 2 20 nvme0n1 150 5000 1ms 9ms D A C EHP INT => run 2 threads of ycsb A, C, and D with EHP and INT on 20 cores (sleep time: 150s, 1ms bgio, 9ms idle, 5000 x 2 fio jobs)"
   exit 1
 fi
@@ -89,7 +89,7 @@ set_mode() {
     "E") YCSB_E=true ;;
     "F") YCSB_F=true ;;
     "CP") M_CP=true ;;
-    "HP") M_HP=true ;;
+    "LHP") M_HP=true ;;
     "EHP") M_EHP=true ;;
     "DPAS") M_DPAS=true ;;
     "DPAS2") M_DPAS2=true ;;
@@ -118,7 +118,7 @@ if $YCSB_D; then echo "D"; fi
 if $YCSB_E; then echo "E"; fi
 if $YCSB_F; then echo "F"; fi
 if $M_CP; then echo "CP"; fi
-if $M_HP; then echo "HP"; fi
+if $M_HP; then echo "LHP"; fi
 if $M_EHP; then echo "EHP"; fi
 if $M_DPAS; then echo "DPAS"; fi
 if $M_DPAS2; then echo "DPAS2"; fi
@@ -268,7 +268,7 @@ ycsb_run(){
         mv $OUTPUT_FOLDER "$LOGS_FOLDER/polling"
     fi
 
-    # run HP
+    # run LHP
     if $M_HP; then 
         reset_mount_folder
         (cd "${YCSB_CPP_MODI_DIR}" && "${YCSB_BIN}" -load -db rocksdb -P "${workload_file}" -P "${ROCKSDB_PROPERTIES_FILE}" -s)
@@ -284,10 +284,10 @@ ycsb_run(){
         cat /sys/block/$DEVICE/queue/io_poll_delay
         cat /sys/block/$DEVICE/queue/pas_enabled    
         cat /sys/block/$DEVICE/queue/ehp_enabled    
-        sudo bash -c "sudo ./io-generator1 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 HP" &
-        sudo bash -c "sudo ./io-generator2 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 HP" &
-        sudo bash -c "sudo ./io-generator3 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 HP" &
-        sudo bash -c "sudo ./io-generator4 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 HP" &
+        sudo bash -c "sudo ./io-generator1 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 LHP" &
+        sudo bash -c "sudo ./io-generator2 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 LHP" &
+        sudo bash -c "sudo ./io-generator3 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 LHP" &
+        sudo bash -c "sudo ./io-generator4 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 LHP" &
         (cd "${YCSB_CPP_MODI_DIR}" && "${YCSB_BIN}" -run -db rocksdb -P "${workload_file}" -P "${ROCKSDB_PROPERTIES_FILE}" -s -p threadcount=$NUM_OF_THREADS) | tee $OUTPUT &  
 	while true; do
         if ps aux | grep -v grep | grep "ycsb" > /dev/null; then

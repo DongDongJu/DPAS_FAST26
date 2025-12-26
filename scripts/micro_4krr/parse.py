@@ -8,7 +8,7 @@ def _csv_env(name: str, default: str):
 DEVICE_LIST = _csv_env("DPAS_DEVICE_LIST", "nvme0n1,nvme1n1,nvme2n1")
 JOB_LIST = [int(x) for x in _csv_env("DPAS_JOB_LIST", "1,2,4,8,16,20")]
 RW_FLAGS = _csv_env("DPAS_RW_FLAGS", "RR")
-IO_MODE = _csv_env("DPAS_IO_MODE", "INT,CP,HP,EHP,PAS,DPAS")
+IO_MODE = _csv_env("DPAS_IO_MODE", "INT,CP,LHP,EHP,PAS,DPAS")
 REPEATS = int(sys.argv[1])
 
 try:

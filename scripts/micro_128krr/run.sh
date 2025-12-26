@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DEVICES=("nvme0n1" "nvme1n1" "nvme2n1")
-IO_MODE=("DPAS" "PAS" "HP" "EHP" "CP" "INT")
+IO_MODE=("DPAS" "PAS" "LHP" "EHP" "CP" "INT")
 BS_SIZE=("128" "64" "32" "16" "8")
 RR_RW=("RR") 
 REPEATS=(1)
@@ -83,7 +83,7 @@ for rr_rw in "${RR_RW[@]}"; do
                         modprobe -r nvme && modprobe nvme poll_queues=${MAX_CORE}
                         sleep "${SLEEP_AFTER_MODPROBE}"
 			echo 0 > /sys/block/${device}/queue/nomerges
-                    elif [ ${mode} == "HP" ]; then
+                    elif [ ${mode} == "LHP" ]; then
                         modprobe -r nvme && modprobe nvme poll_queues=${MAX_CORE}
                         sleep "${SLEEP_AFTER_MODPROBE}"
                         echo 0 > /sys/block/${device}/queue/io_poll_delay
