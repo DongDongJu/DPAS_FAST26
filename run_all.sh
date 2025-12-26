@@ -224,9 +224,9 @@ run_fig21_bg_ycsb() {
     sh ./um.sh || true
   }
 
-  run_one_fig21 "nvme0n1" 10 "FIG20_P41"
-  run_one_fig21 "nvme2n1" 10 "FIG20_ZSSD"
   run_one_fig21 "nvme1n1" 30 "FIG20_Optane"
+  run_one_fig21 "nvme2n1" 10 "FIG20_ZSSD"
+  run_one_fig21 "nvme0n1" 10 "FIG20_P41"
 
   bash ./cpuonoff.sh 1 19
 

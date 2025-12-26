@@ -1,8 +1,8 @@
 #!/bin/bash
 
 DEVICES=("nvme0n1" "nvme1n1" "nvme2n1")
-IO_MODE=("CP" "HP" "EHP" "PAS" "DPAS" "INT")
-BS_SIZE=("8" "16" "32" "64" "128")
+IO_MODE=("DPAS" "PAS" "HP" "EHP" "CP" "INT")
+BS_SIZE=("128" "64" "32" "16" "8")
 RR_RW=("RR") 
 REPEATS=(1)
 MAX_CORE=4
@@ -48,8 +48,8 @@ echo `date`
 for rr_rw in "${RR_RW[@]}"; do
     for repeat in "${REPEATS[@]}"; do
         for size in "${BS_SIZE[@]}"; do
-            	for mode in "${IO_MODE[@]}"; do
             for device in "${DEVICES[@]}"; do
+     	        for mode in "${IO_MODE[@]}"; do
                     mkdir -p ./fio_data/${device}/${rr_rw}/${size}KB/${mode}
                     echo 3 > /proc/sys/vm/drop_caches
                     sleep "${SLEEP_DROP}"
@@ -120,9 +120,9 @@ for rr_rw in "${RR_RW[@]}"; do
 
 		    mount /dev/${device} test_${device}
 		    #${FIO_CMD}
-			if [[ "${DPAS_DRAFT:-0}" != "1" ]] && [ ${device} == "nvme1n1" ] && [ ${mode} == "CP" ]; then
-			    ${FIO_CMD}; ${FIO_CMD};
-		fi
+#			if [[ "${DPAS_DRAFT:-0}" != "1" ]] && [ ${device} == "nvme1n1" ] && [ ${mode} == "CP" ]; then
+#			    ${FIO_CMD}; ${FIO_CMD};
+#		fi
 		  # ${FIO_CMD}
                     ${FIO_CMD} > ./fio_data/${device}/${rr_rw}/${size}KB/${mode}/fio_report_${repeat}.log
 		    umount /dev/${device}

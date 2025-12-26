@@ -8,6 +8,11 @@ scripts/micro_4krr/parsed_data/
 scripts/micro_4krr/result_data/
 scripts/micro_4krr/test_*/
 
+# Local run logs
+result.log
+result_macro.log
+scripts/tmp.log
+
 # FIG21 outputs
 scripts/ycsb_*_results/
 scripts/results/

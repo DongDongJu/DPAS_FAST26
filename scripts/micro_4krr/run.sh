@@ -1,8 +1,8 @@
 #!/bin/bash
 
 DEVICES=("nvme0n1" "nvme1n1" "nvme2n1")
-IO_MODE=("CP" "HP" "EHP" "PAS" "DPAS" "INT")
-JOBS=(16 1 2 4 8 20)
+IO_MODE=("DPAS" "PAS" "HP" "EHP" "CP" "INT")
+JOBS=(20 16 8 4 2 1)
 RR_RW=("RR")
 REPEATS=(1)
 MAX_CORE=20
@@ -46,10 +46,10 @@ done
 echo `date`
 
 for rr_rw in "${RR_RW[@]}"; do
-	    for repeat in "${REPEATS[@]}"; do
+    for repeat in "${REPEATS[@]}"; do
         for job in "${JOBS[@]}"; do
 		for device in "${DEVICES[@]}"; do
-    for mode in "${IO_MODE[@]}"; do
+		    for mode in "${IO_MODE[@]}"; do
 
                     mkdir -p ./fio_data/${device}/${rr_rw}/${job}T/${mode}
                     echo 3 > /proc/sys/vm/drop_caches
