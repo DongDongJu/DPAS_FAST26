@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Track a process' CPU usage periodically while it is running.
-# This script is used by scripts/bgio_noaffinity.sh (FIG21 flow).
+# This script is used by scripts/bgio_noaffinity.sh (macro benchmark flow).
 
 set -euo pipefail
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Build dependencies for FIG21 (BGIO + YCSB) flow.
+# Build dependencies for macro benchmark (BGIO + YCSB) flow.
 #
 # This builds:
 # - scripts/io-generator (from scripts/io_gen.c) + symlinks io-generator1..4
@@ -8,7 +8,7 @@
 # - apps/YCSB-cpp-modi (ycsb)
 #
 # Usage:
-#   ./scripts/build_fig21_deps.sh
+#   ./scripts/build_macro_deps.sh
 
 set -euo pipefail
 
@@ -44,5 +44,5 @@ make -C "${APPS_DIR}/YCSB-cpp-modi" || {
   exit 1
 }
 
-echo "[OK] FIG21 dependencies built."
+echo "[OK] macro benchmark dependencies built."
 

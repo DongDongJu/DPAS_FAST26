@@ -261,7 +261,7 @@ ycsb_run(){
         [ ! -d $OUTPUT_FOLDER ] && mkdir $OUTPUT_FOLDER     
         mv $OUTPUT $OUTPUT_FOLDER/
         [ -f results.txt ] && rm -f results.txt
-        echo "Polling" >> results.txt
+        echo "CP" >> results.txt
         python3 "${UTILS_DIR}/postprocessing.py"
         cat results.txt >> $FILENAME
         mv cpu_single_workload.txt "$OUTPUT_FOLDER/cpu_polling.txt"
@@ -304,7 +304,7 @@ ycsb_run(){
         [ ! -d $OUTPUT_FOLDER ] && mkdir $OUTPUT_FOLDER     
         mv $OUTPUT $OUTPUT_FOLDER/
         [ -f results.txt ] && rm -f results.txt
-        echo "Hybrid-polling" >> results.txt
+        echo "LHP" >> results.txt
         python3 "${UTILS_DIR}/postprocessing.py"
         cat results.txt >> $FILENAME
         mv cpu_single_workload.txt "$OUTPUT_FOLDER/cpu_hybrid_polling.txt"
@@ -393,7 +393,7 @@ ycsb_run(){
         [ ! -d $OUTPUT_FOLDER ] && mkdir $OUTPUT_FOLDER     
         mv $OUTPUT $OUTPUT_FOLDER/
         [ -f results.txt ] && rm -f results.txt
-        echo "DPAS" >> results.txt
+        echo "PAS" >> results.txt
         python3 "${UTILS_DIR}/postprocessing.py"
         cat results.txt >> $FILENAME
         mv cpu_single_workload.txt "$OUTPUT_FOLDER/cpu_dpas.txt"
@@ -444,7 +444,7 @@ ycsb_run(){
         [ ! -d $OUTPUT_FOLDER ] && mkdir $OUTPUT_FOLDER     
         mv $OUTPUT $OUTPUT_FOLDER/
         [ -f results.txt ] && rm -f results.txt
-        echo "DPAS2" >> results.txt
+        echo "DPAS" >> results.txt
         python3 "${UTILS_DIR}/postprocessing.py"
         cat results.txt >> $FILENAME
 	cat /sys/block/nvme1n1/queue/switch_stat
@@ -486,7 +486,7 @@ ycsb_run(){
         [ ! -d $OUTPUT_FOLDER ] && mkdir $OUTPUT_FOLDER     
         mv $OUTPUT $OUTPUT_FOLDER/
         [ -f results.txt ] && rm -f results.txt
-        echo "Interrupt" >> results.txt
+        echo "INT" >> results.txt
         python3 "${UTILS_DIR}/postprocessing.py"
         cat results.txt >> $FILENAME
         mv cpu_single_workload.txt "$OUTPUT_FOLDER/cpu_interrupt.txt"

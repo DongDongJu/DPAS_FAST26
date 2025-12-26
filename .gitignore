@@ -13,7 +13,7 @@ result.log
 result_macro.log
 scripts/tmp.log
 
-# FIG21 outputs
+# Macro benchmark outputs
 scripts/ycsb_*_results/
 scripts/results/
 scripts/out/
@@ -21,7 +21,7 @@ scripts/time_log/
 scripts/result_collection/*.txt
 scripts/test/
 
-# Built binaries (keep sources, rebuild via scripts/build_fig21_deps.sh)
+# Built binaries (keep sources, rebuild via scripts/build_macro_deps.sh)
 scripts/io-generator
 scripts/io-generator[1-4]
 apps/**/ycsb

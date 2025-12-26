@@ -34,7 +34,7 @@ sudo ./run_all.sh --draft
 
 - **Step 1 (`scripts/micro_4krr`)**: `./run.sh` → `python3 parse.py 1` → pretty summary output
 - **Step 2 (`scripts/micro_128krr`)**: `./run.sh` → `python3 parse.py 1` → pretty summary output
-- **Step 3 (`Dynamic mode switching of DPAS (Fig. 20)`, BGIO + YCSB, `scripts/`)**: runs by default (disable with `--no-fig21`)
+- **Step 3 (macro benchmark, BGIO + YCSB, `scripts/`)**: runs by default (disable with `--micro-only`)
   - CPU hotplug: `scripts/cpuonoff.sh`
   - BG I/O + YCSB: `scripts/bgio_noaffinity.sh`
   - Result collection: `scripts/cp_res.sh`
@@ -103,7 +103,7 @@ sudo apt install -y build-essential g++ make pkg-config \
 ### One-shot build (recommended)
 
 ```bash
-./scripts/build_fig21_deps.sh
+./scripts/build_macro_deps.sh
 ```
 
 ### Manual build
@@ -150,15 +150,14 @@ sudo apt install -y build-essential zlib1g-dev libsnappy-dev liblz4-dev libzstd-
 - `--clean`: delete `./parsed_data` and `./result_data` before each micro experiment
 - `--raw`: print raw parsed output instead of pretty tables
 - `--micro-only`: run only microbenchmarks (Step 1 & 2)
-- `--macro-only`: run only `Dynamic mode switching of DPAS (Fig. 20)` (macro)
-- `--no-fig21`: alias of `--micro-only`
+- `--macro-only`: run only macro benchmark
 
 ## Outputs
 
 - Microbenchmarks:
   - `scripts/micro_128krr/parsed_data/*`, `scripts/micro_128krr/result_data/*`
   - `scripts/micro_4krr/parsed_data/*`, `scripts/micro_4krr/result_data/*`
-- Macro (Dynamic mode switching of DPAS (Fig. 20)):
+- Macro benchmark:
   - `scripts/ycsb_*_results/`
   - `scripts/result_collection/*`
 

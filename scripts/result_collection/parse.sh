@@ -5,7 +5,7 @@
 # Usage:
 #   ./parse.sh <PREFIX>
 # Example:
-#   ./parse.sh FIG21_P41
+#   ./parse.sh MACRO_P41
 
 set -euo pipefail
 

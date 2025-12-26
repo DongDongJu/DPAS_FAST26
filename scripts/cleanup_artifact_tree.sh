@@ -42,7 +42,7 @@ rm -rf \
   "${ROOT_DIR}/scripts/micro_4krr/__pycache__" \
   2>/dev/null || true
 
-echo "[CLEAN] removing built binaries (rebuild via scripts/build_fig21_deps.sh)"
+echo "[CLEAN] removing built binaries (rebuild via scripts/build_macro_deps.sh)"
 rm -f \
   "${ROOT_DIR}/scripts/io-generator" \
   "${ROOT_DIR}/scripts/io-generator1" \

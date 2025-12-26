@@ -15,15 +15,14 @@ APPS_DIR="${ROOT_DIR}/apps"
 usage() {
   cat <<'EOF'
 Usage:
-  sudo ./run_all.sh [--draft] [--clean] [--raw] [--micro-only|--macro-only] [--no-fig21]
+  sudo ./run_all.sh [--draft] [--clean] [--raw] [--micro-only|--macro-only]
 
 Options:
   --draft       Quick smoke-test mode (shorter runtimes and smaller sweeps).
   --clean       Remove ./parsed_data and ./result_data before each micro experiment.
   --raw         Print raw parsed output instead of pretty tables.
   --micro-only  Run only microbenchmarks (Step 1 & 2).
-  --macro-only  Run only Dynamic mode switching of DPAS (Fig. 20) (BGIO+YCSB).
-  --no-fig21    Alias of --micro-only.
+  --macro-only  Run only macro benchmark (BGIO + YCSB).
 
 Notes:
   - Macro BGIO IOPS is fixed to 1000 in this artifact runner.
@@ -68,8 +67,8 @@ ensure_all_cpus_online() {
   done
 }
 
-ensure_fig21_deps_built() {
-  build_script="${SCRIPTS_DIR}/build_fig21_deps.sh"
+ensure_macro_deps_built() {
+  build_script="${SCRIPTS_DIR}/build_macro_deps.sh"
   require_executable "${build_script}"
 
   need_build=0
@@ -166,7 +165,7 @@ run_experiment() {
   cd "${oldpwd}" || exit 1
 }
 
-run_fig21_bg_ycsb() {
+run_macro_benchmark() {
   bgio_iops="$1"
   draft="$2"
 
@@ -180,7 +179,7 @@ run_fig21_bg_ycsb() {
 
   echo
   echo "============================================================"
-  echo "[RUN] Dynamic mode switching of DPAS (Fig. 20)  (BGIO + YCSB, IOPS=${bgio_iops})"
+  echo "[RUN] macro benchmark (BGIO + YCSB, IOPS=${bgio_iops})"
   echo "============================================================"
 
   oldpwd="$(pwd)"
@@ -189,7 +188,7 @@ run_fig21_bg_ycsb() {
   # Ensure we don't leave CPUs offlined on failures.
   trap "bash ./cpuonoff.sh 1 19 >/dev/null 2>&1 || true; cd \"${oldpwd}\" >/dev/null 2>&1 || true" 0 1 2 3 15
 
-  ensure_fig21_deps_built
+  ensure_macro_deps_built
 
   require_executable "./cpuonoff.sh"
   require_executable "./cpus.sh"
@@ -197,6 +196,7 @@ run_fig21_bg_ycsb() {
   require_executable "./cp_res.sh"
   require_file "./um.sh"
   require_executable "./result_collection/parse.sh"
+  require_file "./result_collection/pretty_macro.py"
 
   require_executable "./io-generator1"
   require_executable "./io-generator2"
@@ -211,22 +211,29 @@ run_fig21_bg_ycsb() {
   bash ./cpuonoff.sh 0 19
   bash ./cpuonoff.sh 1 3
 
-  run_one_fig21() {
+  run_one_macro() {
     dev="$1"
     threshold="$2"
     name="$3"
 
     echo
-    echo "[MACRO] ${name}  device=${dev}  threshold=${threshold}"
+    echo "[MACRO] ${name} device=${dev} threshold=${threshold}"
     sh ./um.sh || true
     bash ./bgio_noaffinity.sh 4 4 "${dev}" "${sleep_time}" "${bgio_iops}" "${epoch_ms}" "${bgruntime}" "${threshold}" CP LHP EHP DPAS DPAS2 INT A B C D E F
     bash ./cp_res.sh "${name}" a b c d e f
+
+    if [ "${raw}" -eq 0 ]; then
+      echo
+      echo "[OUTPUT] macro benchmark summary: ${name}"
+      python3 "./result_collection/pretty_macro.py" "${name}" --dir "./result_collection" || true
+    fi
+
     sh ./um.sh || true
   }
 
-  run_one_fig21 "nvme1n1" 30 "FIG20_Optane"
-  run_one_fig21 "nvme2n1" 10 "FIG20_ZSSD"
-  run_one_fig21 "nvme0n1" 10 "FIG20_P41"
+  run_one_macro "nvme1n1" 30 "FIG20_Optane"
+  run_one_macro "nvme2n1" 10 "FIG20_ZSSD"
+  run_one_macro "nvme0n1" 10 "FIG20_P41"
 
   bash ./cpuonoff.sh 1 19
 
@@ -267,11 +274,6 @@ main() {
         run_macro=1
         shift
         ;;
-      --no-fig21)
-        run_micro=1
-        run_macro=0
-        shift
-        ;;
       -h|--help)
         usage
         exit 0
@@ -304,6 +306,8 @@ main() {
 
   if [ "${run_micro}" -eq 1 ]; then
     require_cmd fio
+  fi
+  if [ "${run_micro}" -eq 1 ] || [ "${run_macro}" -eq 1 ]; then
     require_cmd python3
   fi
 
@@ -348,10 +352,10 @@ main() {
   fi
 
   if [ "${run_macro}" -eq 1 ]; then
-    run_fig21_bg_ycsb 1000 "${draft}"
+    run_macro_benchmark 1000 "${draft}"
   else
     echo
-    echo "[SKIP] macro (Dynamic mode switching of DPAS (Fig. 20)): disabled via --micro-only/--no-fig21"
+    echo "[SKIP] macro benchmark: disabled via --micro-only"
   fi
 }
 
