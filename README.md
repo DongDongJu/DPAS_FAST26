@@ -81,7 +81,6 @@ This section provides the evaluation road map and full documentation to reproduc
 - **Claim 3 (macro benchmark outputs)**: The macro benchmark produces, for each workload (A–F) and each mode (**CP/LHP/EHP/PAS/DPAS/INT**), the following metrics and stores them in collected files under `scripts/result_collection/`:
   - YCSB throughput (`ops`)
   - average CPU utilization (`cpu`)
-  - Note: we intentionally do **not** introduce additional derived metrics beyond what is reported in the paper.
 
 ### Evaluation road map
 
