@@ -1,186 +1,199 @@
-# DPAS_FAST26
+# DPAS FAST'26 Artifact
 
-This repository contains the artifact for the DPAS FAST'26 paper. The goal is **one-touch execution after cloning**, i.e., run everything with a single command: `sudo ./run_all.sh` (with automatic build steps when needed).
+This repository contains the artifact accompanying our FAST'26 paper on DPAS.
+It provides:
 
-## Quick start (artifact evaluation: one-touch)
+- **Microbenchmarks** (fio-based) under `scripts/micro_*`
+- A **macro benchmark** (BGIO + YCSB + RocksDB) under `scripts/`
+- One-touch runner: `sudo ./run_all.sh`
 
-**Important**: The scripts **format NVMe devices (mkfs.xfs -f)** and mount/unmount them. Existing data on the target devices will be destroyed.
+---
 
-- **Run everything (microbenchmarks + Dynamic mode switching of DPAS (Fig. 20))**:
+## Getting Started Instructions (≤ 30 minutes)
 
-```bash
-sudo ./run_all.sh
-```
+The goal of this section is a **kick-the-tires** check so reviewers can quickly verify that the artifact is functional.
 
-- **Run microbenchmarks only**:
+### Safety / prerequisites (read first)
 
-```bash
-sudo ./run_all.sh --micro-only
-```
-
-- **Run macro only: Dynamic mode switching of DPAS (Fig. 20)**:
-
-```bash
-sudo ./run_all.sh --macro-only
-```
-
-- **Quick smoke test (draft) + macro**:
+- **Data-destructive**: the scripts run `mkfs.xfs -f` on the target NVMe devices and mount/unmount them. **All existing data on the target devices will be destroyed.**
+- **Root required**: the workflow uses `mount/umount`, `modprobe`, `/proc/sys/vm/drop_caches`, `/sys/block/*`, and CPU hotplug.
+- **Kernel support required**: the macro benchmark expects DPAS-related sysfs knobs (e.g., `pas_enabled`, `ehp_enabled`, `switch_enabled`) to exist under `/sys/block/<dev>/queue/`.
+  - Quick check (example device `nvme0n1`):
 
 ```bash
-sudo ./run_all.sh --draft
+ls /sys/block/nvme0n1/queue/{pas_enabled,ehp_enabled,switch_enabled} >/dev/null
 ```
 
-## What does it run?
+If this check fails, you are **not running a compatible kernel**, and the macro benchmark will not run (see Detailed Instructions → Kernel requirement).
 
-- **Step 1 (`scripts/micro_4krr`)**: `./run.sh` → `python3 parse.py 1` → pretty summary output
-- **Step 2 (`scripts/micro_128krr`)**: `./run.sh` → `python3 parse.py 1` → pretty summary output
-- **Step 3 (macro benchmark, BGIO + YCSB, `scripts/`)**: runs by default (disable with `--micro-only`)
-  - CPU hotplug: `scripts/cpuonoff.sh`
-  - BG I/O + YCSB: `scripts/bgio_noaffinity.sh`
-  - Result collection: `scripts/cp_res.sh`
-
-## Critical notes
-
-- **Root is required**: the scripts use `mount/umount`, `modprobe`, `/proc/sys/vm/drop_caches`, `/sys/block/*`, and CPU hotplug.
-- **CPU online (reproducibility)**: `utils/cpu on` is called at the beginning to online as many CPUs as possible (some environments may restrict hotplug).
-- **Device naming**:
-  - Microbenchmarks default to `nvme0n1,nvme1n1,nvme2n1` (can be overridden by env vars).
-  - Macro scripts are written assuming `nvme0n1/nvme1n1/nvme2n1`.
-
-## Dependencies (summary)
-
-- **fio**
-  - The microbenchmarks use `--ioengine=pvsync2`.
-  - Verify `pvsync2` exists:
-
-```bash
-fio --version
-fio --enghelp | grep -n pvsync2
-```
-
-- **Python 3 + numpy**: required for `scripts/*/parse.py` and `scripts/*/mean_std.py`
-- **xfsprogs**: provides `mkfs.xfs`
-- **Other utilities**: `mount`, `umount`, `modprobe`, `findmnt`, `pgrep`, `tee`, `sed`
-
-## Installing fio 3.35 (from fio GitHub)
-
-### Ubuntu/Debian example: build dependencies
+### Install dependencies (Ubuntu/Debian)
 
 ```bash
 sudo apt update
-sudo apt install -y git build-essential pkg-config libaio-dev zlib1g-dev libnuma-dev liburing-dev
-```
-
-### Build/install fio 3.35
-
-```bash
-git clone https://github.com/axboe/fio.git
-cd fio
-git checkout fio-3.35
-make -j"$(nproc)"
-sudo make install
-fio --version
-```
-
-### Verify `pvsync2` (required)
-
-```bash
-fio --enghelp | grep -n pvsync2
-```
-
-## Building dependencies for Dynamic mode switching of DPAS (Fig. 20) (BGIO+YCSB)
-
-This macro experiment requires additional binaries: `io-generator`, RocksDB, and YCSB.
-
-### Ubuntu/Debian packages (recommended)
-
-```bash
-sudo apt update
-sudo apt install -y build-essential g++ make pkg-config \
+sudo apt install -y xfsprogs python3 python3-numpy gcc g++ make pkg-config \
   liburing-dev libbz2-dev zlib1g-dev libsnappy-dev liblz4-dev libzstd-dev
 ```
 
-### One-shot build (recommended)
+For microbenchmarks you also need **fio with `pvsync2`**. Verify:
+
+```bash
+fio --enghelp | grep -n pvsync2
+```
+
+### Build macro benchmark dependencies (≈ a few minutes)
 
 ```bash
 ./scripts/build_macro_deps.sh
 ```
 
-### Manual build
+### “Hello-world sized” smoke test (single device, single workload)
 
-- **1) io-generator (`scripts/io_gen.c`)**
-  - `io-generator1..4` are symlinks to the same binary (used for process naming/pgrep).
-
-```bash
-gcc -O2 -D_GNU_SOURCE -pthread -o scripts/io-generator scripts/io_gen.c
-ln -sf io-generator scripts/io-generator1
-ln -sf io-generator scripts/io-generator2
-ln -sf io-generator scripts/io-generator3
-ln -sf io-generator scripts/io-generator4
-```
-
-If you see a `clock_gettime` link error on older systems:
+This runs **only workload A** with a small set of modes and short runtime, then prints a readable table.
+It is the fastest way to confirm the end-to-end macro pipeline.
 
 ```bash
-gcc -O2 -D_GNU_SOURCE -pthread -lrt -o scripts/io-generator scripts/io_gen.c
+cd scripts
+sudo ./bgio_noaffinity.sh 4 4 nvme0n1 1 1000 320 60 10 CP LHP INT A
+sudo ./cp_res.sh MACRO_SMOKE a
+python3 ./result_collection/pretty_macro.py MACRO_SMOKE --dir ./result_collection
 ```
 
-- **2) RocksDB (modified)**
+**What to look for**
+
+- The command prints **tables** for `[ops/sec]`, `[cpu avg]`, and `[ops/sec per cpu]`.
+- Files created under:
+  - `scripts/ycsb_a_results/`
+  - `scripts/result_collection/MACRO_SMOKE_a.txt`
+
+### Optional: one-touch smoke test (macro-only)
+
+If (and only if) your system has **all three** devices `nvme0n1/nvme1n1/nvme2n1` available and dedicated for testing:
 
 ```bash
-make -C apps/rocksdb_modi static_lib
+sudo ./run_all.sh --draft --macro-only
 ```
 
-- **3) YCSB (modified)**
+---
+
+## Detailed Instructions
+
+This section provides the evaluation road map and full documentation to reproduce the artifact results.
+
+### Artifact claims (what this artifact enables)
+
+**The claims below are concrete and testable in this repository.** Absolute performance numbers may differ across machines; the artifact is intended to reproduce the **reported trends** and produce the same **metrics** as in the paper.
+
+- **Claim 1 (kernel interface availability)**: On a compatible kernel, block devices expose DPAS-related sysfs knobs under `/sys/block/<dev>/queue/` (e.g., `pas_enabled`, `ehp_enabled`, `switch_enabled`, `io_poll_delay`, `switch_param*`).
+- **Claim 2 (microbench outputs)**: The microbenchmarks generate per-mode performance summaries (IOPS and latency percentiles) and write parsed outputs under:
+  - `scripts/micro_4krr/parsed_data/*`, `scripts/micro_4krr/result_data/*`
+  - `scripts/micro_128krr/parsed_data/*`, `scripts/micro_128krr/result_data/*`
+- **Claim 3 (macro benchmark outputs)**: The macro benchmark produces, for each workload (A–F) and each mode (**CP/LHP/EHP/PAS/DPAS/INT**), the following metrics and stores them in collected files under `scripts/result_collection/`:
+  - YCSB throughput (`ops/sec`)
+  - average CPU utilization (`cpu`)
+  - a derived “efficiency” metric (`ops/sec per cpu`) via `scripts/result_collection/pretty_macro.py`
+
+### Evaluation road map
+
+Recommended evaluation order:
+
+1. **Environment validation**
+   - Confirm kernel sysfs knobs exist for your test devices.
+   - Confirm fio has `pvsync2` if you plan to run microbenchmarks.
+2. **Kick-the-tires (≤ 30 minutes)**
+   - Run the “Hello-world sized” smoke test in Getting Started.
+3. **Full evaluation**
+   - Run microbenchmarks (Step 1–2) and macro benchmark (Step 3) using `run_all.sh`.
+   - Collect and inspect outputs; optionally re-run with different devices or shortened sweeps.
+
+### Kernel requirement (important)
+
+The scripts expect additional sysfs queue attributes (e.g., `pas_enabled`, `ehp_enabled`, `switch_enabled`).
+These attributes are implemented in the kernel tree vendored under `./kernel/`.
+
+**If these files do not exist under `/sys/block/<dev>/queue/`, the macro benchmark will fail.**
+
+We provide the kernel source for reproducibility; however, building and booting a kernel is system-dependent and may take longer than the kick-the-tires phase.
+At a minimum, the reviewer should ensure they are running a kernel that includes the changes under `kernel/block/blk-sysfs.c` and related files.
+
+### One-touch runner (`run_all.sh`)
+
+Run everything:
 
 ```bash
-make -C apps/YCSB-cpp-modi
+sudo ./run_all.sh
 ```
 
-### Ubuntu/Debian example: packages for macro build
+Run only microbenchmarks:
 
 ```bash
-sudo apt update
-sudo apt install -y build-essential zlib1g-dev libsnappy-dev liblz4-dev libzstd-dev
+sudo ./run_all.sh --micro-only
 ```
 
-## `run_all.sh` options
+Run only macro benchmark:
+
+```bash
+sudo ./run_all.sh --macro-only
+```
+
+Smoke test mode (shorter runtimes/sweeps):
+
+```bash
+sudo ./run_all.sh --draft
+```
+
+Options:
 
 - `--draft`: quick smoke test (smaller sweep + shorter runtimes)
 - `--clean`: delete `./parsed_data` and `./result_data` before each micro experiment
-- `--raw`: print raw parsed output instead of pretty tables
-- `--micro-only`: run only microbenchmarks (Step 1 & 2)
+- `--raw`: print raw parsed output instead of pretty tables (also suppresses macro pretty table printing)
+- `--micro-only`: run only microbenchmarks
 - `--macro-only`: run only macro benchmark
 
-## Outputs
+### Microbenchmarks (how to interpret outputs)
 
-- Microbenchmarks:
-  - `scripts/micro_128krr/parsed_data/*`, `scripts/micro_128krr/result_data/*`
-  - `scripts/micro_4krr/parsed_data/*`, `scripts/micro_4krr/result_data/*`
-- Macro benchmark:
-  - `scripts/ycsb_*_results/`
-  - `scripts/result_collection/*`
+Each micro benchmark directory contains:
 
-## Estimated runtime (reference)
+- `run.sh`: runs fio across a sweep (devices/modes/jobs/sizes)
+- `parse.py`: parses fio logs into `parsed_data/` and `result_data/`
+- `utils/pretty_print.py`: prints compact tables in the terminal (used by `run_all.sh`)
 
-- `micro_128krr`: ~35–45 min
-- `micro_4krr`: ~20–30 min
-- Total: ~55–75 min (varies by device/system/module load time)
+You can override the sweep without editing scripts using environment variables:
 
-## Troubleshooting
+- `DPAS_DEVICE_LIST` (comma-separated, e.g., `nvme0n1,nvme2n1`)
+- `DPAS_IO_MODE` (comma-separated)
+- `DPAS_BS_LIST` (comma-separated, micro_128krr)
+- `DPAS_JOB_LIST` (comma-separated, micro_4krr)
+- `DPAS_RUNTIME` and sleep-related knobs (`DPAS_SLEEP_*`)
+
+### Macro benchmark (how to interpret outputs)
+
+The macro benchmark runs BGIO + YCSB workloads and collects per-mode results.
+`run_all.sh` prints a per-device summary table automatically (unless `--raw` is used).
+
+To print a summary from already collected files:
+
+```bash
+python3 scripts/result_collection/pretty_macro.py FIG20_P41 --dir scripts/result_collection
+```
+
+### Expected runtime (reference)
+
+- **Kick-the-tires smoke test**: typically well under 30 minutes.
+- **Microbenchmarks** (full sweep): ~55–75 min total (device/system dependent).
+- **Macro benchmark**: can take **significantly longer** depending on workloads, device speed, and module load times.
+
+### Troubleshooting
 
 - **`fio: fio_setaffinity failed`**
-  - Cause: affinity mismatch due to CPU count / cpuset/cgroup restrictions.
-  - The scripts use `/proc/self/status` `Cpus_allowed_list` to reduce this issue.
-- **Macro prompts for sudo / fails**
-  - `run_all.sh` is designed to be executed as root; macro scripts treat `sudo` as a no-op when running as root.
-- **`./run_all.sh: syntax error near unexpected token '('`**
-  - If you are using an older revision of this artifact: this was typically caused by running bash-specific code via `sh`.
-  - Current `run_all.sh` is POSIX `sh` compatible, so this error should not occur.
+  - Cause: cpuset/cgroup CPU constraints.
+  - Mitigation: scripts use `/proc/self/status` `Cpus_allowed_list`, but very restrictive environments may still fail.
+- **Macro run prints `environment: line 1: ... Killed`**
+  - Usually an OOM kill or external watchdog kill.
+  - Check `dmesg` for OOM messages; try `--draft`, reduce the set of modes/workloads, and ensure sufficient RAM/swap.
 
-## Cleanup
+### Cleanup
 
-If previous runs left root-owned output directories inside the repo, clean them up with:
+If previous runs left root-owned output directories inside the repo:
 
 ```bash
 sudo ./scripts/cleanup_artifact_tree.sh
