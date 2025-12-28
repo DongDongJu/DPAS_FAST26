@@ -211,7 +211,7 @@ This spreadsheet corresponds to the **PAS_SIM** evaluation described in **Sectio
   - Set **COOLDN** in cell **B10**
   - Set **HEATUP** in cell **B11**
   - The chart updates automatically.
-- **PAS ramp 및 Settling performance sheet**
+- **PAS ramp and settling performance sheet**
   - Set **UP** in cell **Q2**
   - Set **DN** in cell **R2**
 
