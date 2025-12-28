@@ -18,7 +18,8 @@ except:
     sys.exit(1)
 
 def log_header_print(f):
-	print("Threads".ljust(17), end="", file=f)
+	# First column is I/O size in KB for micro_128krr.
+	print("IO_size(KB)".ljust(17), end="", file=f)
 	for i, mode in enumerate(IO_MODE):
 		end = "" if i < len(IO_MODE) - 1 else "\n"
 		print(f"{mode}".ljust(17), end=end, file=f)

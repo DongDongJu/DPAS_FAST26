@@ -100,7 +100,8 @@ def print_summary(metric: str, header: List[str], rows: List[List[str]]) -> None
         values.append(v)
     vmax = max(values) if values else 0.0
 
-    title = f"{metric} (Summary for Threads={first[0]})"
+    row_key = header[0] if header else "Row"
+    title = f"{metric} (Summary for {row_key}={first[0]})"
     print(title)
     for label, v in zip(labels, values):
         b = _bar(v, vmax)
