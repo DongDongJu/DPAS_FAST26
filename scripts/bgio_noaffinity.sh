@@ -31,7 +31,7 @@ is_positive_integer() {
 # Check if there are at least three input parameters
 if [ $# -lt 8 ]; then
   echo "Usage: $0 <NUM_OF_THREADS> <NUM_OF_CORES> <DEVICE> <SLEEP_TIME> <IOPS> <EPOCH ms> [MODE1 MODE2 ...]"
-  echo "Supported modes: A B C D E F CP LHP EHP DPAS DPAS2 INT"
+  echo "Supported modes: A B C D E F CP LHP EHP PAS DPAS INT"
   echo "Example: $0 2 20 nvme0n1 150 5000 1ms 9ms D A C EHP INT => run 2 threads of ycsb A, C, and D with EHP and INT on 20 cores (sleep time: 150s, 1ms bgio, 9ms idle, 5000 x 2 fio jobs)"
   exit 1
 fi
@@ -74,8 +74,8 @@ YCSB_F=false
 M_CP=false
 M_HP=false
 M_EHP=false
+M_PAS=false
 M_DPAS=false
-M_DPAS2=false
 M_INT=false
 
 # Function to set a mode variable to true
@@ -91,8 +91,8 @@ set_mode() {
     "CP") M_CP=true ;;
     "LHP") M_HP=true ;;
     "EHP") M_EHP=true ;;
+    "PAS") M_PAS=true ;;
     "DPAS") M_DPAS=true ;;
-    "DPAS2") M_DPAS2=true ;;
     "INT") M_INT=true ;;
     *) echo "Unknown mode: $mode"; exit 1 ;;
   esac
@@ -120,8 +120,8 @@ if $YCSB_F; then echo "F"; fi
 if $M_CP; then echo "CP"; fi
 if $M_HP; then echo "LHP"; fi
 if $M_EHP; then echo "EHP"; fi
+if $M_PAS; then echo "PAS"; fi
 if $M_DPAS; then echo "DPAS"; fi
-if $M_DPAS2; then echo "DPAS2"; fi
 if $M_INT; then echo "INT"; fi
 
 #echo "sudo bash -c "sudo ./io-generator $DEVICE 128 $FIO_IOPS $EPOCH 1 $SLEEP_TIME 4 EHP" &"
@@ -355,16 +355,67 @@ ycsb_run(){
         mv $OUTPUT_FOLDER "$LOGS_FOLDER/ehp"
     fi
 
+    # run PAS
+    if $M_PAS; then 
+        reset_mount_folder
+        (cd "${YCSB_CPP_MODI_DIR}" && "${YCSB_BIN}" -load -db rocksdb -P "${workload_file}" -P "${ROCKSDB_PROPERTIES_FILE}" -s)
+	echo "wait $SLEEP_TIME sec for NAND SSD"; sleep $SLEEP_TIME;
+        echo "enable PAS and clear page cache before benchmarking"
+        sudo bash -c "echo 1 > /sys/block/$DEVICE/queue/pas_enabled"
+        sudo bash -c "echo 1 > /sys/block/$DEVICE/queue/pas_adaptive_enabled"
+        sudo bash -c "echo 0 > /sys/block/$DEVICE/queue/io_poll_delay"
+        sudo bash -c "echo 1 > /sys/block/$DEVICE/queue/nomerges"
+	sleep 3
+        sudo bash -c "sync; echo 3 > /proc/sys/vm/drop_caches"
+        echo "io_poll, io_poll_delay, pas_enabled, ehp_enabled"
+        cat /sys/block/$DEVICE/queue/io_poll
+        cat /sys/block/$DEVICE/queue/io_poll_delay
+        cat /sys/block/$DEVICE/queue/pas_enabled    
+        cat /sys/block/$DEVICE/queue/ehp_enabled    
+        sudo bash -c "sudo ./io-generator1 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 PAS" &
+        sudo bash -c "sudo ./io-generator2 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 PAS" &
+        sudo bash -c "sudo ./io-generator3 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 PAS" &
+        sudo bash -c "sudo ./io-generator4 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 PAS" &
+        (cd "${YCSB_CPP_MODI_DIR}" && "${YCSB_BIN}" -run -db rocksdb -P "${workload_file}" -P "${ROCKSDB_PROPERTIES_FILE}" -s -p threadcount=$NUM_OF_THREADS) | tee $OUTPUT &
+	while true; do
+        if ps aux | grep -v grep | grep "ycsb" > /dev/null; then
+            echo "ycsb found."
+            break
+        else
+            echo "ycbs not found. Waiting..."
+            sleep 0.05
+        fi
+        done
+        bash "${UTILS_DIR}/track_cpu.sh" ycsb cpu_single_workload.txt 
+        echo "clean up"
+        kill_bg_ios
+        sudo bash -c "echo 0 > /sys/block/$DEVICE/queue/pas_enabled"
+        [ ! -d $OUTPUT_FOLDER ] && mkdir $OUTPUT_FOLDER     
+        mv $OUTPUT $OUTPUT_FOLDER/
+        [ -f results.txt ] && rm -f results.txt
+        echo "PAS" >> results.txt
+        python3 "${UTILS_DIR}/postprocessing.py"
+        cat results.txt >> $FILENAME
+        mv cpu_single_workload.txt "$OUTPUT_FOLDER/cpu_pas.txt"
+        mv $OUTPUT_FOLDER "$LOGS_FOLDER/pas"
+    fi
+
     # run DPAS
     if $M_DPAS; then 
         reset_mount_folder
         (cd "${YCSB_CPP_MODI_DIR}" && "${YCSB_BIN}" -load -db rocksdb -P "${workload_file}" -P "${ROCKSDB_PROPERTIES_FILE}" -s)
+	dmesg -c > tmp.log
 	echo "wait $SLEEP_TIME sec for NAND SSD"; sleep $SLEEP_TIME;
         echo "enable DPAS and clear page cache before benchmarking"
         sudo bash -c "echo 1 > /sys/block/$DEVICE/queue/pas_enabled"
         sudo bash -c "echo 1 > /sys/block/$DEVICE/queue/pas_adaptive_enabled"
         sudo bash -c "echo 0 > /sys/block/$DEVICE/queue/io_poll_delay"
         sudo bash -c "echo 1 > /sys/block/$DEVICE/queue/nomerges"
+	sudo bash -c "echo 1 > /sys/block/$DEVICE/queue/switch_enabled" 
+	sudo bash -c "echo 0 > /sys/block/$DEVICE/queue/switch_param1" 
+	sudo bash -c "echo 10 > /sys/block/$DEVICE/queue/switch_param2" 
+	sudo bash -c "echo $THRESHOLD > /sys/block/$DEVICE/queue/switch_param3" 
+	sudo bash -c "echo 1 > /sys/block/$DEVICE/queue/switch_param4" 
 	sleep 3
         sudo bash -c "sync; echo 3 > /proc/sys/vm/drop_caches"
         echo "io_poll, io_poll_delay, pas_enabled, ehp_enabled"
@@ -393,64 +444,13 @@ ycsb_run(){
         [ ! -d $OUTPUT_FOLDER ] && mkdir $OUTPUT_FOLDER     
         mv $OUTPUT $OUTPUT_FOLDER/
         [ -f results.txt ] && rm -f results.txt
-        echo "PAS" >> results.txt
-        python3 "${UTILS_DIR}/postprocessing.py"
-        cat results.txt >> $FILENAME
-        mv cpu_single_workload.txt "$OUTPUT_FOLDER/cpu_dpas.txt"
-        mv $OUTPUT_FOLDER "$LOGS_FOLDER/dpas"
-    fi
-
-    # run DPAS2
-    if $M_DPAS2; then 
-        reset_mount_folder
-        (cd "${YCSB_CPP_MODI_DIR}" && "${YCSB_BIN}" -load -db rocksdb -P "${workload_file}" -P "${ROCKSDB_PROPERTIES_FILE}" -s)
-	dmesg -c > tmp.log
-	echo "wait $SLEEP_TIME sec for NAND SSD"; sleep $SLEEP_TIME;
-        echo "enable DPAS2 and clear page cache before benchmarking"
-        sudo bash -c "echo 1 > /sys/block/$DEVICE/queue/pas_enabled"
-        sudo bash -c "echo 1 > /sys/block/$DEVICE/queue/pas_adaptive_enabled"
-        sudo bash -c "echo 0 > /sys/block/$DEVICE/queue/io_poll_delay"
-        sudo bash -c "echo 1 > /sys/block/$DEVICE/queue/nomerges"
-	sudo bash -c "echo 1 > /sys/block/$DEVICE/queue/switch_enabled" 
-	sudo bash -c "echo 0 > /sys/block/$DEVICE/queue/switch_param1" 
-	sudo bash -c "echo 10 > /sys/block/$DEVICE/queue/switch_param2" 
-	sudo bash -c "echo $THRESHOLD > /sys/block/$DEVICE/queue/switch_param3" 
-	sudo bash -c "echo 1 > /sys/block/$DEVICE/queue/switch_param4" 
-	sleep 3
-        sudo bash -c "sync; echo 3 > /proc/sys/vm/drop_caches"
-        echo "io_poll, io_poll_delay, pas_enabled, ehp_enabled"
-        cat /sys/block/$DEVICE/queue/io_poll
-        cat /sys/block/$DEVICE/queue/io_poll_delay
-        cat /sys/block/$DEVICE/queue/pas_enabled    
-        cat /sys/block/$DEVICE/queue/ehp_enabled    
-        sudo bash -c "sudo ./io-generator1 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 DPAS2" &
-        sudo bash -c "sudo ./io-generator2 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 DPAS2" &
-        sudo bash -c "sudo ./io-generator3 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 DPAS2" &
-        sudo bash -c "sudo ./io-generator4 $DEVICE 128 $FIO_IOPS $EPOCH 1 $BGRUNTIME 1 DPAS2" &
-        (cd "${YCSB_CPP_MODI_DIR}" && "${YCSB_BIN}" -run -db rocksdb -P "${workload_file}" -P "${ROCKSDB_PROPERTIES_FILE}" -s -p threadcount=$NUM_OF_THREADS) | tee $OUTPUT &
-	while true; do
-        if ps aux | grep -v grep | grep "ycsb" > /dev/null; then
-            echo "ycsb found."
-            break
-        else
-            echo "ycbs not found. Waiting..."
-            sleep 0.05
-        fi
-        done
-        bash "${UTILS_DIR}/track_cpu.sh" ycsb cpu_single_workload.txt 
-        echo "clean up"
-        kill_bg_ios
-        sudo bash -c "echo 0 > /sys/block/$DEVICE/queue/pas_enabled"
-        [ ! -d $OUTPUT_FOLDER ] && mkdir $OUTPUT_FOLDER     
-        mv $OUTPUT $OUTPUT_FOLDER/
-        [ -f results.txt ] && rm -f results.txt
         echo "DPAS" >> results.txt
         python3 "${UTILS_DIR}/postprocessing.py"
         cat results.txt >> $FILENAME
 	cat /sys/block/nvme1n1/queue/switch_stat
 	dmesg -c 
-        mv cpu_single_workload.txt "$OUTPUT_FOLDER/cpu_dpas2.txt"
-        mv $OUTPUT_FOLDER "$LOGS_FOLDER/dpas2"
+        mv cpu_single_workload.txt "$OUTPUT_FOLDER/cpu_dpas.txt"
+        mv $OUTPUT_FOLDER "$LOGS_FOLDER/dpas"
     fi
     # run INT
     if $M_INT; then 

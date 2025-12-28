@@ -219,7 +219,7 @@ run_macro_benchmark() {
     echo
     echo "[MACRO] ${name} device=${dev} threshold=${threshold}"
     sh ./um.sh || true
-    bash ./bgio_noaffinity.sh 4 4 "${dev}" "${sleep_time}" "${bgio_iops}" "${epoch_ms}" "${bgruntime}" "${threshold}" CP LHP EHP DPAS DPAS2 INT A B C D E F
+    bash ./bgio_noaffinity.sh 4 4 "${dev}" "${sleep_time}" "${bgio_iops}" "${epoch_ms}" "${bgruntime}" "${threshold}" CP LHP EHP PAS DPAS INT A B C D E F
     bash ./cp_res.sh "${name}" a b c d e f
 
     if [ "${raw}" -eq 0 ]; then
