@@ -17,21 +17,13 @@ The goal of this section is a **kick-the-tires** check so reviewers can quickly 
 
 - **Data-destructive**: the scripts run `mkfs.xfs -f` on the target NVMe devices and mount/unmount them. **All existing data on the target devices will be destroyed.**
 - **Root required**: the workflow uses `mount/umount`, `modprobe`, `/proc/sys/vm/drop_caches`, `/sys/block/*`, and CPU hotplug.
-- **Kernel support required**: the macro benchmark expects DPAS-related sysfs knobs (e.g., `pas_enabled`, `ehp_enabled`, `switch_enabled`) to exist under `/sys/block/<dev>/queue/`.
-  - Quick check (example device `nvme0n1`):
+The kick-the-tires steps below use **microbench Step 1 only**, and do not require DPAS-specific sysfs knobs (macro-specific kernel requirements are covered in Detailed Instructions).
 
-```bash
-ls /sys/block/nvme0n1/queue/{pas_enabled,ehp_enabled,switch_enabled} >/dev/null
-```
-
-If this check fails, you are **not running a compatible kernel**, and the macro benchmark will not run (see Detailed Instructions → Kernel requirement).
-
-### Install dependencies (Ubuntu/Debian)
+### Install dependencies for kick-the-tires (Ubuntu/Debian)
 
 ```bash
 sudo apt update
-sudo apt install -y xfsprogs python3 python3-numpy gcc g++ make pkg-config \
-  liburing-dev libbz2-dev zlib1g-dev libsnappy-dev liblz4-dev libzstd-dev
+sudo apt install -y xfsprogs python3 python3-numpy
 ```
 
 For microbenchmarks you also need **fio with `pvsync2`**. Verify:
@@ -40,37 +32,36 @@ For microbenchmarks you also need **fio with `pvsync2`**. Verify:
 fio --enghelp | grep -n pvsync2
 ```
 
-### Build macro benchmark dependencies (≈ a few minutes)
+### Kick-the-tires smoke test (Step 1 only: `micro_4krr`)
+
+This runs a **small microbench** (4K random read) with **INT mode only** and a short runtime, then prints a readable table.
+It is intended to finish quickly and catch obvious issues (dependencies, permissions, fio engine availability).
 
 ```bash
-./scripts/build_macro_deps.sh
-```
+export DPAS_DEVICE_LIST=nvme0n1
+export DPAS_IO_MODE=INT
+export DPAS_JOB_LIST=1
+export DPAS_RUNTIME=5
 
-### “Hello-world sized” smoke test (single device, single workload)
-
-This runs **only workload A** with a small set of modes and short runtime, then prints a readable table.
-It is the fastest way to confirm the end-to-end macro pipeline.
-
-```bash
-cd scripts
-sudo ./bgio_noaffinity.sh 4 4 nvme0n1 1 1000 320 60 10 CP LHP INT A
-sudo ./cp_res.sh MACRO_SMOKE a
-python3 ./result_collection/pretty_macro.py MACRO_SMOKE --dir ./result_collection
+cd scripts/micro_4krr
+sudo -E bash ./run.sh
+python3 ./parse.py 1
+python3 ../../utils/pretty_print.py ./parsed_data
 ```
 
 **What to look for**
 
-- The command prints **tables** for `[ops/sec]`, `[cpu avg]`, and `[ops/sec per cpu]`.
+- The command prints an `[IOPS]` table and a `[CPU]` table.
 - Files created under:
-  - `scripts/ycsb_a_results/`
-  - `scripts/result_collection/MACRO_SMOKE_a.txt`
+  - `scripts/micro_4krr/parsed_data/`
+  - `scripts/micro_4krr/result_data/`
 
-### Optional: one-touch smoke test (macro-only)
+### Optional: one-touch smoke test (micro-only)
 
-If (and only if) your system has **all three** devices `nvme0n1/nvme1n1/nvme2n1` available and dedicated for testing:
+If you want a one-touch run that covers **both** micro steps (Step 1 and Step 2) with shortened parameters:
 
 ```bash
-sudo ./run_all.sh --draft --macro-only
+sudo ./run_all.sh --draft --micro-only
 ```
 
 ---
@@ -100,7 +91,7 @@ Recommended evaluation order:
    - Confirm kernel sysfs knobs exist for your test devices.
    - Confirm fio has `pvsync2` if you plan to run microbenchmarks.
 2. **Kick-the-tires (≤ 30 minutes)**
-   - Run the “Hello-world sized” smoke test in Getting Started.
+   - Run the Step 1 (`scripts/micro_4krr`) smoke test in Getting Started.
 3. **Full evaluation**
    - Run microbenchmarks (Step 1–2) and macro benchmark (Step 3) using `run_all.sh`.
    - Collect and inspect outputs; optionally re-run with different devices or shortened sweeps.
