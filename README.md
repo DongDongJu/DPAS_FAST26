@@ -176,6 +176,11 @@ To print a summary from already collected files:
 python3 scripts/result_collection/pretty_macro.py FIG20_P41 --dir scripts/result_collection
 ```
 
+**Note (recommended for reviewers)**:
+`pretty_macro.py` is intended as a **quick sanity-check** in the CLI (per-workload `ops` and `cpu avg`).
+For the final verification / plotting step, we recommend copying the values from the collected files
+(`scripts/result_collection/<PREFIX>_<workload>.txt`) into a spreadsheet (e.g., Excel) to avoid ambiguity.
+
 ### Expected runtime (reference)
 
 - **Kick-the-tires smoke test**: typically well under 30 minutes.

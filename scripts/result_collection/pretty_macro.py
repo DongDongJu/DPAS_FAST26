@@ -220,41 +220,33 @@ def main() -> int:
             return "DPAS"
         return m
 
-    # Build throughput table.
-    ops_header = ["MODE"] + [w.upper() for w in workloads_ordered] + ["MEAN", "MED", "MIN", "MAX"]
+    # Build tables.
+    #
+    # NOTE: For macrobench, workloads A-F are different workloads. Showing mean/min/max
+    # across A-F can be misleading, so we only show per-workload values for ops.
+    ops_header = ["MODE"] + [w.upper() for w in workloads_ordered]
     ops_rows: List[List[str]] = []
     cpu_header = ["MODE"] + [w.upper() for w in workloads_ordered] + ["MEAN", "MED", "MIN", "MAX"]
     cpu_rows: List[List[str]] = []
-    ratio_header = ["MODE"] + [w.upper() for w in workloads_ordered] + ["MEAN", "MED", "MIN", "MAX"]
-    ratio_rows: List[List[str]] = []
 
     for mode in modes_ordered:
         ops_vals: List[float] = []
         cpu_vals: List[float] = []
-        ratio_vals: List[float] = []
 
         ops_cells: List[str] = []
         cpu_cells: List[str] = []
-        ratio_cells: List[str] = []
 
         for w in workloads_ordered:
             e = data.get(w, {}).get(mode)
             if e is None:
                 ops_cells.append("NA")
                 cpu_cells.append("NA")
-                ratio_cells.append("NA")
                 continue
 
             if e.ops is not None:
                 ops_vals.append(e.ops)
             if e.cpu is not None:
                 cpu_vals.append(e.cpu)
-            if e.ops is not None and e.cpu is not None and e.cpu > 0:
-                ratio = e.ops / e.cpu
-                ratio_vals.append(ratio)
-                ratio_cells.append(_format_num(ratio, "ratio"))
-            else:
-                ratio_cells.append("NA")
 
             ops_cells.append(_format_num(e.ops, "ops"))
             cpu_cells.append(_format_num(e.cpu, "cpu"))
@@ -265,20 +257,16 @@ def main() -> int:
             mean, med, lo, hi = _stats(vals)
             return [_format_num(mean, kind), _format_num(med, kind), _format_num(lo, kind), _format_num(hi, kind)]
 
-        ops_rows.append([display_mode(mode)] + ops_cells + stats_cells(ops_vals, "ops"))
+        ops_rows.append([display_mode(mode)] + ops_cells)
         cpu_rows.append([display_mode(mode)] + cpu_cells + stats_cells(cpu_vals, "cpu"))
-        ratio_rows.append([display_mode(mode)] + ratio_cells + stats_cells(ratio_vals, "ratio"))
 
     print(f"== Macrobench summary: {prefix} ==")
     print()
-    print("[ops/sec]")
+    print("[ops]")
     print(_table(ops_header, ops_rows))
     print()
     print("[cpu avg]")
     print(_table(cpu_header, cpu_rows))
-    print()
-    print("[ops/sec per cpu]")
-    print(_table(ratio_header, ratio_rows))
     print()
     print(f"Files: {', '.join([prefix + '_' + w + '.txt' for w in workloads_ordered])}")
     return 0
