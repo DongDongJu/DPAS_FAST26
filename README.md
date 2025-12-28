@@ -174,7 +174,30 @@ For the final verification / plotting step, we recommend copying the values from
 ### Spreadsheets (recommended for final verification / paper-figure reproduction)
 
 We provide spreadsheets to help reviewers reproduce the paper’s plots by pasting artifact outputs into predefined cells.
-If you do not see the `.xlsx` files in your checkout yet, they may be provided alongside the artifact package (or release) and should be placed at the repo root.
+This repository includes the following spreadsheets at the **repo root**:
+
+- `REPRODUCE_EXCEL.xlsx`: reproduce the **paper figures/graphs** (micro + macro)
+- `PAS_SIM.xlsx`: reproduce **PAS_SIM** results (paper Section 3.2)
+
+#### `REPRODUCE_EXCEL.xlsx` (paper figures/graphs)
+
+This spreadsheet is for reproducing the paper’s graphs in the same layout.
+
+- **Microbench → Excel**
+  - To match the paper’s figure format, copy values from `scripts/micro_*/result_data/` into the **yellow cell region** of the corresponding sheet.
+- **Macrobench → Excel**
+  - Generate the raw (paste-friendly) values from `scripts/result_collection/` using `parse.sh`:
+
+```bash
+cd scripts/result_collection
+./parse.sh FIG20_Optane
+```
+
+  - Paste the output into the macro sheet at **`Q2:R37`** (as indicated in the spreadsheet).
+  - Output format:
+    - First block: `ops` values
+    - A separator line `--`
+    - Second block: `cpu` values
 
 #### `PAS_SIM.xlsx` (paper Section 3.2: PAS_SIM)
 
@@ -191,27 +214,6 @@ This spreadsheet corresponds to the **PAS_SIM** evaluation described in **Sectio
 - **PAS ramp 및 Settling performance sheet**
   - Set **UP** in cell **Q2**
   - Set **DN** in cell **R2**
-
-#### Microbenchmark and macro benchmark spreadsheets
-
-The micro/macro spreadsheets are used to reproduce the paper’s graphs in the same layout.
-(If they are not yet present in the repo, they should be included with the artifact package.)
-
-- **Microbench → Excel**
-  - To match the paper’s figure format, copy values from `scripts/micro_*/result_data/` into the **yellow cell region** of the corresponding sheet.
-- **Macrobench → Excel**
-  - Generate the raw (paste-friendly) values from `scripts/result_collection/` using `parse.sh`:
-
-```bash
-cd scripts/result_collection
-./parse.sh FIG20_Optane
-```
-
-  - Paste the output into the macro spreadsheet at **`Q2:R37`** (as indicated in the sheet).
-  - Example output format (truncated):
-    - First block: `ops` values
-    - A separator line `--`
-    - Second block: `cpu` values
 
 ### Expected runtime (reference)
 
