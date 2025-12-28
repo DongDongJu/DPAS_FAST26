@@ -79,9 +79,9 @@ This section provides the evaluation road map and full documentation to reproduc
   - `scripts/micro_4krr/parsed_data/*`, `scripts/micro_4krr/result_data/*`
   - `scripts/micro_128krr/parsed_data/*`, `scripts/micro_128krr/result_data/*`
 - **Claim 3 (macro benchmark outputs)**: The macro benchmark produces, for each workload (A–F) and each mode (**CP/LHP/EHP/PAS/DPAS/INT**), the following metrics and stores them in collected files under `scripts/result_collection/`:
-  - YCSB throughput (`ops/sec`)
+  - YCSB throughput (`ops`)
   - average CPU utilization (`cpu`)
-  - a derived “efficiency” metric (`ops/sec per cpu`) via `scripts/result_collection/pretty_macro.py`
+  - Note: we intentionally do **not** introduce additional derived metrics beyond what is reported in the paper.
 
 ### Evaluation road map
 
@@ -171,6 +171,48 @@ python3 scripts/result_collection/pretty_macro.py FIG20_P41 --dir scripts/result
 `pretty_macro.py` is intended as a **quick sanity-check** in the CLI (per-workload `ops` and `cpu avg`).
 For the final verification / plotting step, we recommend copying the values from the collected files
 (`scripts/result_collection/<PREFIX>_<workload>.txt`) into a spreadsheet (e.g., Excel) to avoid ambiguity.
+
+### Spreadsheets (recommended for final verification / paper-figure reproduction)
+
+We provide spreadsheets to help reviewers reproduce the paper’s plots by pasting artifact outputs into predefined cells.
+If you do not see the `.xlsx` files in your checkout yet, they may be provided alongside the artifact package (or release) and should be placed at the repo root.
+
+#### `PAS_SIM.xlsx` (paper Section 3.2: PAS_SIM)
+
+This spreadsheet corresponds to the **PAS_SIM** evaluation described in **Section 3.2** of the paper.
+
+- **UP_DN sheet**
+  - Set **UP** in cell **R2**
+  - Set **DN** in cell **S2**
+  - The chart updates automatically.
+- **HEATUP_COOLDN sheet**
+  - Set **COOLDN** in cell **B10**
+  - Set **HEATUP** in cell **B11**
+  - The chart updates automatically.
+- **PAS ramp 및 Settling performance sheet**
+  - Set **UP** in cell **Q2**
+  - Set **DN** in cell **R2**
+
+#### Microbenchmark and macro benchmark spreadsheets
+
+The micro/macro spreadsheets are used to reproduce the paper’s graphs in the same layout.
+(If they are not yet present in the repo, they should be included with the artifact package.)
+
+- **Microbench → Excel**
+  - To match the paper’s figure format, copy values from `scripts/micro_*/result_data/` into the **yellow cell region** of the corresponding sheet.
+- **Macrobench → Excel**
+  - Generate the raw (paste-friendly) values from `scripts/result_collection/` using `parse.sh`:
+
+```bash
+cd scripts/result_collection
+./parse.sh FIG20_Optane
+```
+
+  - Paste the output into the macro spreadsheet at **`Q2:R37`** (as indicated in the sheet).
+  - Example output format (truncated):
+    - First block: `ops` values
+    - A separator line `--`
+    - Second block: `cpu` values
 
 ### Expected runtime (reference)
 
