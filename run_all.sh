@@ -346,6 +346,12 @@ main() {
   if [ "${run_micro}" -eq 1 ]; then
     run_experiment "${SCRIPTS_DIR}/micro_4krr" 1 "${clean}" "${raw}"
     run_experiment "${SCRIPTS_DIR}/micro_128krr" 1 "${clean}" "${raw}"
+
+    if [ "${run_macro}" -eq 1 ]; then
+      echo
+      echo "[SLEEP] Waiting 10 minutes before macro benchmark..."
+      sleep 600
+    fi
   else
     echo
     echo "[SKIP] microbenchmarks (Step 1 & 2): disabled via --macro-only"

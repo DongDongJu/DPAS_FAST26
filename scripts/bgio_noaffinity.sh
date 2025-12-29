@@ -447,8 +447,6 @@ ycsb_run(){
         echo "DPAS" >> results.txt
         python3 "${UTILS_DIR}/postprocessing.py"
         cat results.txt >> $FILENAME
-	cat /sys/block/nvme1n1/queue/switch_stat
-	dmesg -c 
         mv cpu_single_workload.txt "$OUTPUT_FOLDER/cpu_dpas.txt"
         mv $OUTPUT_FOLDER "$LOGS_FOLDER/dpas"
     fi

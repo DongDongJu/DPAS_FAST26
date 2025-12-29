@@ -226,7 +226,7 @@ def main() -> int:
     # across A-F can be misleading, so we only show per-workload values for ops.
     ops_header = ["MODE"] + [w.upper() for w in workloads_ordered]
     ops_rows: List[List[str]] = []
-    cpu_header = ["MODE"] + [w.upper() for w in workloads_ordered] + ["MEAN", "MED", "MIN", "MAX"]
+    cpu_header = ["MODE"] + [w.upper() for w in workloads_ordered]
     cpu_rows: List[List[str]] = []
 
     for mode in modes_ordered:
@@ -251,14 +251,8 @@ def main() -> int:
             ops_cells.append(_format_num(e.ops, "ops"))
             cpu_cells.append(_format_num(e.cpu, "cpu"))
 
-        def stats_cells(vals: List[float], kind: str) -> List[str]:
-            if not vals:
-                return ["NA", "NA", "NA", "NA"]
-            mean, med, lo, hi = _stats(vals)
-            return [_format_num(mean, kind), _format_num(med, kind), _format_num(lo, kind), _format_num(hi, kind)]
-
         ops_rows.append([display_mode(mode)] + ops_cells)
-        cpu_rows.append([display_mode(mode)] + cpu_cells + stats_cells(cpu_vals, "cpu"))
+        cpu_rows.append([display_mode(mode)] + cpu_cells)
 
     print(f"== Macrobench summary: {prefix} ==")
     print()

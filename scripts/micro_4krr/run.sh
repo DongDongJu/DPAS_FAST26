@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DEVICES=("nvme0n1" "nvme1n1" "nvme2n1")
-IO_MODE=("DPAS" "PAS" "LHP" "EHP" "CP" "INT")
+IO_MODE=("CP" "DPAS" "PAS" "LHP" "EHP" "INT")
 JOBS=(20 16 8 4 2 1)
 RR_RW=("RR")
 REPEATS=(1)

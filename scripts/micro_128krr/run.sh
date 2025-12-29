@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DEVICES=("nvme0n1" "nvme1n1" "nvme2n1")
-IO_MODE=("DPAS" "PAS" "LHP" "EHP" "CP" "INT")
+IO_MODE=("CP" "DPAS" "PAS" "LHP" "EHP" "INT")
 BS_SIZE=("128" "64" "32" "16" "8")
 RR_RW=("RR") 
 REPEATS=(1)
