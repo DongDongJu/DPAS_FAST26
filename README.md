@@ -193,7 +193,7 @@ cd scripts/result_collection
 ./parse.sh FIG20_Optane
 ```
 
-  - Paste the output into the macro sheet at **`Q2:R37`** (as indicated in the spreadsheet).
+  - Paste the output into the **macro** sheet at **`Q2:R37`** (as indicated in the spreadsheet).
   - Output format:
     - First block: `ops` values
     - A separator line `--`
