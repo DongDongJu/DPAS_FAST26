@@ -251,7 +251,7 @@ ycsb_run(){
             echo "ycsb found."
             break
         else
-            echo "ycbs not found. Waiting..."
+            echo "ycsb not found. Waiting..."
             sleep 0.05
         fi
         done
@@ -294,7 +294,7 @@ ycsb_run(){
             echo "ycsb found."
             break
         else
-            echo "ycbs not found. Waiting..."
+            echo "ycsb not found. Waiting..."
             sleep 0.05
         fi
         done
@@ -337,7 +337,7 @@ ycsb_run(){
             echo "ycsb found."
             break
         else
-            echo "ycbs not found. Waiting..."
+            echo "ycsb not found. Waiting..."
             sleep 0.05
         fi
         done
@@ -382,7 +382,7 @@ ycsb_run(){
             echo "ycsb found."
             break
         else
-            echo "ycbs not found. Waiting..."
+            echo "ycsb not found. Waiting..."
             sleep 0.05
         fi
         done
@@ -433,7 +433,7 @@ ycsb_run(){
             echo "ycsb found."
             break
         else
-            echo "ycbs not found. Waiting..."
+            echo "ycsb not found. Waiting..."
             sleep 0.05
         fi
         done
@@ -474,7 +474,7 @@ ycsb_run(){
             echo "ycsb found."
             break
         else
-            echo "ycbs not found. Waiting..."
+            echo "ycsb not found. Waiting..."
             sleep 0.05
         fi
         done
